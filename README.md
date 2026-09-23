@@ -280,7 +280,7 @@ For issues, questions, or contributions:
 
 ---
 
-**Built with ❤️ by ELEANOR Team**
+**Built with ❤️ by Faltýn corp. **
 
 **Last Updated**: September 2, 2026
 
