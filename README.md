@@ -1,6 +1,6 @@
 # ELEANOR - Bitcoin Wallet for Android
 
-**ELEANOR** is a secure Bitcoin wallet application for Android developed by @ivosicek123 (ORCID: 0009-0007-4808-8653), with integrated banking withdrawal capabilities through Partners banka.
+**ELEANOR** is a secure Bitcoin wallet application for Android developed by @ivosicek123 (ORCID: 0009-0007-4808-8653), with integrated banking withdrawal capabilities through Anycoin M.P.
 
 ## 👤 Developer Information
 
@@ -18,7 +18,7 @@
 - Real-time balance updates
 
 ### Banking Integration
-- Direct withdrawal to Partners banka account
+- Direct withdrawal to Anycoin M.account
 - Bitcoin to CZK conversion with live rates
 - Secure transaction processing
 - Withdrawal history tracking
