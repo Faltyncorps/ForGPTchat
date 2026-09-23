@@ -69,9 +69,7 @@ blockchain_api_key=YOUR_API_KEY
 # BlockCypher API
 blockcypher_token=YOUR_TOKEN
 
-# Partners banka API
-partners_banka_api_key=YOUR_API_KEY
-partners_banka_api_secret=YOUR_API_SECRET
+# Anycoin M.P.
 
 # Bitcoin Network
 bitcoin_network=mainnet
