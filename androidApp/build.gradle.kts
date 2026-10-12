@@ -12,14 +12,27 @@ android {
         applicationId = "cz.faltyn.elfall"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "0.5.0"
     }
 
     buildFeatures { compose = true; buildConfig = true }
 
-    flavorDimensions += "network"
+    flavorDimensions += listOf("app", "network")
     productFlavors {
+        // Eleanor = standalone wallet: direct public testnet APIs, no RunPod / ELFALL network, no FLC / cash-out / swap.
+        create("eleanor") {
+            dimension = "app"
+            isDefault = true
+            applicationId = "cz.faltyn.eleanor"
+            resValue("string", "app_name", "Eleanor")
+            buildConfigField("boolean", "STANDALONE", "true")
+        }
+        create("elfall") {
+            dimension = "app"
+            resValue("string", "app_name", "ELFALL")
+            buildConfigField("boolean", "STANDALONE", "false")
+        }
         create("bitcoinTestnet") {
             dimension = "network"
             isDefault = true
@@ -57,4 +70,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.appcompat:appcompat:1.7.0")
+    // QR scan (camera intent, handles CameraX/permissions internally) + QR render
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+    implementation("com.google.zxing:core:3.5.3")
 }

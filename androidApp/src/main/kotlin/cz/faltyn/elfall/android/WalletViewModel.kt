@@ -3,42 +3,31 @@ package cz.faltyn.elfall.android
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import cz.faltyn.elfall.shared.AddressCheck
-import cz.faltyn.elfall.shared.AddressValidator
-import cz.faltyn.elfall.shared.BtcNetwork
+import cz.faltyn.elfall.shared.*
 import cz.faltyn.elfall.shared.assets.DevAssets
 import cz.faltyn.elfall.shared.assets.FLC_REFERENCE_USD
 import cz.faltyn.elfall.shared.network.ElfallNetwork
-import cz.faltyn.elfall.shared.EsploraClient
-import cz.faltyn.elfall.shared.TransferFeePreview
-import cz.faltyn.elfall.shared.TransferService
-import cz.faltyn.elfall.shared.WalletCore
-import cz.faltyn.elfall.shared.offramp.FiatCurrency
-import cz.faltyn.elfall.shared.offramp.HostedFlow
-import cz.faltyn.elfall.shared.offramp.OffRampConfig
-import cz.faltyn.elfall.shared.offramp.OffRampProvider
-import cz.faltyn.elfall.shared.offramp.OffRampQuote
-import cz.faltyn.elfall.shared.offramp.OffRampQuoteRequest
-import cz.faltyn.elfall.shared.offramp.defaultOffRampProviders
-import cz.faltyn.elfall.shared.parseBtcToSats
-import cz.faltyn.elfall.shared.swap.SwapHostedFlow
-import cz.faltyn.elfall.shared.swap.SwapProvider
-import cz.faltyn.elfall.shared.swap.SwapQuote
-import cz.faltyn.elfall.shared.swap.SwapQuoteRequest
-import cz.faltyn.elfall.shared.swap.defaultSwapProviders
+import cz.faltyn.elfall.shared.offramp.*
+import cz.faltyn.elfall.shared.swap.*
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-enum class AppMode { RECEIVE, TRANSFER, SWAP, WITHDRAW_CARD }
+enum class AppMode { RECEIVE, TRANSFER, HISTORY, NETWORK, SWAP, WITHDRAW_CARD }
 
 data class UiState(
+    val standalone: Boolean = BuildConfig.STANDALONE,
     val network: BtcNetwork = BtcNetwork.DEFAULT,
     val elfallNetwork: ElfallNetwork = ElfallNetwork.DEFAULT,
     val mode: AppMode = AppMode.RECEIVE,
-    val hasWallet: Boolean = false,
+    val hasSeed: Boolean = false,
+    val unlocked: Boolean = false,
+    val authBound: Boolean = false,
     val newMnemonic: List<String>? = null,
+    val addressIndex: Long = 0,
     val address: String? = null,
     val balanceSats: Long? = null,
     // Transfer
@@ -47,101 +36,170 @@ data class UiState(
     val addressError: String? = null,
     val transferPreview: TransferFeePreview? = null,
     val lastTxid: String? = null,
-    // Card cash-out
+    // History
+    val stellarAccount: String = "",
+    val history: List<HistoryItem> = emptyList(),
+    val stellarHistory: List<HistoryItem> = emptyList(),
+    // Network info (display only)
+    val infoNetwork: BtcNetwork = BtcNetwork.DEFAULT,
+    val snapshot: NetworkSnapshot? = null,
+    // ELFALL-only
     val cashCurrency: FiatCurrency = FiatCurrency.CZK,
     val cashProviderIndex: Int = 0,
     val cashQuote: OffRampQuote? = null,
     val cashFlow: HostedFlow? = null,
-    // Swap
     val swapFrom: String = "BTC",
     val swapTo: String = "ETH",
     val swapQuote: SwapQuote? = null,
     val swapFlow: SwapHostedFlow? = null,
     val busy: Boolean = false,
     val error: String? = null,
-)
+    val info: String? = null,
+) {
+    val modes: List<AppMode> get() =
+        if (standalone) listOf(AppMode.RECEIVE, AppMode.TRANSFER, AppMode.HISTORY, AppMode.NETWORK) else AppMode.entries
+}
 
 class WalletViewModel(app: Application) : AndroidViewModel(app) {
     private val store = KeystoreSeedStore(app)
     private val network = BtcNetwork.fromName(BuildConfig.BTC_NETWORK)
     private val esplora = EsploraClient(network.esploraUrl)
+    private val horizon = HorizonClient()
+    private val netInfo = NetworkInfoClient()
     private var wallet: WalletCore? = null
-    private val offRampProviders: List<OffRampProvider> = defaultOffRampProviders(OffRampConfig())
-    private val swapProviders: List<SwapProvider> = defaultSwapProviders()
+    private val offRampProviders = defaultOffRampProviders(OffRampConfig())
+    private val swapProviders = defaultSwapProviders()
 
-    private val _state = MutableStateFlow(UiState(network = network))
+    private val _state = MutableStateFlow(
+        UiState(
+            network = network,
+            hasSeed = store.hasSeed(),
+            addressIndex = store.loadAddressIndex(),
+            transferAddress = store.loadPayoutAddress().orEmpty(),
+            stellarAccount = store.loadStellarAccount().orEmpty(),
+        )
+    )
     val state: StateFlow<UiState> = _state
-
     val offRampProviderNames get() = offRampProviders.map { it.id.displayName }
 
-    init {
-        store.loadMnemonic()?.let { open(it) }
-        store.loadPayoutAddress()?.let { addr -> _state.update { it.copy(transferAddress = addr) } }
-    }
+    private fun fail(e: Throwable, prefix: String = "") = _state.update { it.copy(error = prefix + (e.message ?: e::class.simpleName), busy = false) }
 
-    private fun open(words: List<String>) {
-        val w = WalletCore.fromMnemonic(words, network)
-        wallet = w
-        _state.update { it.copy(hasWallet = true, address = w.receiveAddress()) }
-        refresh()
-    }
+    // --- Unlock / create (call only after BiometricGate success) ---
+    fun unlockAfterAuth() = runCatching {
+        val words = store.loadMnemonic() ?: error("No wallet")
+        open(words)
+    }.onFailure { fail(it, "Unlock: ") }
 
-    fun setMode(mode: AppMode) = _state.update { it.copy(mode = mode, error = null) }
-
-    /** Placeholder selector — MAINNET stays locked until rollout checklist is done. */
-    fun setElfallNetwork(n: ElfallNetwork) {
-        if (n == ElfallNetwork.MAINNET) {
-            _state.update { it.copy(error = "Mainnet je zatím zamčený / Mainnet locked — viz docs/elfall-network.md") }
-            return
-        }
-        _state.update { it.copy(elfallNetwork = n, error = null) }
-    }
-
-    fun stellarAssetLabels(): List<String> = DevAssets.stellarTestnetAssets().map { a ->
-        if (a.referenceUsd != null) "${a.symbol} (ref ${a.referenceUsd} USD, testnet)" else a.symbol
-    }
-
-    val flcReferenceUsd get() = FLC_REFERENCE_USD
-
-    fun createWallet() {
+    fun createWalletAfterAuth() = runCatching {
         val words = WalletCore.newMnemonic()
         store.saveMnemonic(words)
         open(words)
-        _state.update { it.copy(newMnemonic = words) }
-    }
+        _state.update { it.copy(newMnemonic = words, hasSeed = true) }
+    }.onFailure { fail(it, "Create: ") }
 
-    fun restoreWallet(input: String) = runCatching {
+    fun restoreWalletAfterAuth(input: String) = runCatching {
         val words = input.trim().lowercase().split(Regex("\\s+"))
         WalletCore.fromMnemonic(words, network)
         store.saveMnemonic(words)
         open(words)
-    }.onFailure { e -> _state.update { it.copy(error = "Invalid recovery phrase: ${e.message}") } }
+        _state.update { it.copy(hasSeed = true) }
+    }.onFailure { fail(it, "Invalid recovery phrase: ") }
+
+    fun onAuthError(msg: String) = _state.update { it.copy(error = msg) }
+
+    fun lock() { wallet = null; _state.update { it.copy(unlocked = false, newMnemonic = null) } }
+
+    private fun open(words: List<String>) {
+        val w = WalletCore.fromMnemonic(words, network)
+        wallet = w
+        val idx = store.loadAddressIndex()
+        _state.update { it.copy(unlocked = true, authBound = store.isAuthBound, addressIndex = idx, address = w.receiveAddress(idx), error = null) }
+        refresh()
+    }
 
     fun backupConfirmed() = _state.update { it.copy(newMnemonic = null) }
+    fun setMode(mode: AppMode) {
+        _state.update { it.copy(mode = mode, error = null) }
+        when (mode) { AppMode.HISTORY -> loadHistory(); AppMode.NETWORK -> loadNetworkInfo(); else -> Unit }
+    }
+
+    /** BIP84 next unused-style address: advance external index (gap ≤ 20). */
+    fun nextAddress() {
+        val w = wallet ?: return
+        val idx = (_state.value.addressIndex + 1).coerceAtMost(19)
+        store.saveAddressIndex(idx)
+        _state.update { it.copy(addressIndex = idx, address = w.receiveAddress(idx)) }
+    }
+
+    private fun ownAddresses(): List<String> = wallet?.receiveAddresses((_state.value.addressIndex + 1).toInt()) ?: emptyList()
 
     fun refresh() {
-        val addr = wallet?.receiveAddress() ?: return
+        val addrs = ownAddresses().ifEmpty { return }
         viewModelScope.launch {
-            runCatching { esplora.balanceSats(addr) }
+            runCatching { addrs.map { a -> async { esplora.balanceSats(a) } }.awaitAll().sum() }
                 .onSuccess { b -> _state.update { it.copy(balanceSats = b, error = null) } }
-                .onFailure { e -> _state.update { it.copy(error = "Balance: ${e.message}") } }
+                .onFailure { fail(it, "Balance: ") }
         }
     }
 
-    // --- Transfer (crypto address) ---
+    // --- History ---
+    fun onStellarAccountChange(v: String) { _state.update { it.copy(stellarAccount = v.trim()) }; store.saveStellarAccount(v.trim()) }
+
+    fun loadHistory() {
+        val addrs = ownAddresses()
+        val g = _state.value.stellarAccount
+        viewModelScope.launch {
+            _state.update { it.copy(busy = true) }
+            runCatching {
+                val tip = esplora.tipHeight()
+                val txs = addrs.map { a -> async { esplora.addressTxs(a) } }.awaitAll().flatten().distinctBy { it.txid }
+                HistoryMapper.fromEsplora(txs, addrs.toSet(), tip, network.explorerUrl)
+                    .sortedByDescending { it.timeEpochSec ?: Long.MAX_VALUE }
+            }.onSuccess { h -> _state.update { it.copy(history = h, busy = false) } }.onFailure { fail(it, "History: ") }
+            if (PaymentUriParser.isStellarAccount(g)) {
+                runCatching { horizon.toHistory(g, horizon.payments(g)) }
+                    .onSuccess { h -> _state.update { it.copy(stellarHistory = h) } }
+                    .onFailure { e -> _state.update { it.copy(stellarHistory = emptyList(), info = "Stellar: ${e.message}") } }
+            }
+        }
+    }
+
+    // --- Network info (read-only) ---
+    fun setInfoNetwork(n: BtcNetwork) { _state.update { it.copy(infoNetwork = n, snapshot = null) }; loadNetworkInfo() }
+
+    fun loadNetworkInfo() {
+        val n = _state.value.infoNetwork
+        viewModelScope.launch {
+            _state.update { it.copy(busy = true) }
+            runCatching { netInfo.snapshot(n) }
+                .onSuccess { s -> _state.update { it.copy(snapshot = s, busy = false) } }
+                .onFailure { fail(it, "Network: ") }
+        }
+    }
+
+    // --- QR scan result ---
+    fun onScanned(raw: String) {
+        when (val p = PaymentUriParser.parse(raw)) {
+            is ParsedPayment.Bitcoin -> {
+                onTransferAddressChange(p.address)
+                p.amountSats?.let { s -> _state.update { it.copy(amountInput = s.satsToBtcString()) } }
+                _state.update { it.copy(mode = AppMode.TRANSFER) }
+            }
+            is ParsedPayment.Stellar -> {
+                onStellarAccountChange(p.destination)
+                _state.update { it.copy(info = "Stellar ${p.destination.take(8)}… ${p.amount ?: ""} ${p.assetCode ?: "XLM"} — podpis v LOBSTR/Freighter (SEP-7)") }
+            }
+            is ParsedPayment.Unknown -> _state.update { it.copy(error = "Neznámý QR / Unknown QR") }
+        }
+    }
+
+    // --- Transfer ---
     fun onTransferAddressChange(v: String) {
         val err = if (v.isBlank()) null else (AddressValidator.check(v, network) as? AddressCheck.Invalid)?.reason
         _state.update { it.copy(transferAddress = v, addressError = err, transferPreview = null) }
     }
-
-    fun saveTransferAddress() {
-        val a = _state.value.transferAddress.trim()
-        if (AddressValidator.isValid(a, network)) store.savePayoutAddress(a)
-    }
-
-    fun onAmountChange(v: String) = _state.update {
-        it.copy(amountInput = v, transferPreview = null, cashQuote = null, cashFlow = null, swapQuote = null)
-    }
+    fun saveTransferAddress() { val a = _state.value.transferAddress.trim(); if (AddressValidator.isValid(a, network)) store.savePayoutAddress(a) }
+    fun onAmountChange(v: String) = _state.update { it.copy(amountInput = v, transferPreview = null, cashQuote = null, cashFlow = null, swapQuote = null) }
 
     fun previewTransfer() {
         val w = wallet ?: return
@@ -150,8 +208,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             _state.update { it.copy(busy = true, error = null) }
             runCatching { TransferService(w, esplora).preview(s.transferAddress, sats) }
-                .onSuccess { p -> _state.update { it.copy(transferPreview = p, busy = false) } }
-                .onFailure { e -> _state.update { it.copy(error = e.message, busy = false) } }
+                .onSuccess { p -> _state.update { it.copy(transferPreview = p, busy = false) } }.onFailure { fail(it) }
         }
     }
 
@@ -162,54 +219,40 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
             _state.update { it.copy(busy = true, error = null) }
             runCatching { TransferService(w, esplora).send(p) }
                 .onSuccess { txid -> _state.update { it.copy(lastTxid = txid, transferPreview = null, busy = false) }; refresh() }
-                .onFailure { e -> _state.update { it.copy(error = e.message, busy = false) } }
+                .onFailure { fail(it) }
         }
     }
 
-    // --- Card cash-out ---
-    fun setCashCurrency(c: FiatCurrency) = _state.update { it.copy(cashCurrency = c, cashQuote = null, cashFlow = null) }
-    fun setCashProvider(index: Int) = _state.update { it.copy(cashProviderIndex = index, cashQuote = null, cashFlow = null) }
+    // --- ELFALL-only (hidden in standalone Eleanor) ---
+    fun setElfallNetwork(n: ElfallNetwork) {
+        if (n == ElfallNetwork.MAINNET) { _state.update { it.copy(error = "Mainnet je zatím zamčený / Mainnet locked") }; return }
+        _state.update { it.copy(elfallNetwork = n, error = null) }
+    }
+    fun stellarAssetLabels(): List<String> = DevAssets.stellarTestnetAssets().map { a ->
+        if (a.referenceUsd != null) "${a.symbol} (ref ${a.referenceUsd} USD, testnet)" else a.symbol
+    }
+    val flcReferenceUsd get() = FLC_REFERENCE_USD
 
+    fun setCashCurrency(c: FiatCurrency) = _state.update { it.copy(cashCurrency = c, cashQuote = null, cashFlow = null) }
+    fun setCashProvider(i: Int) = _state.update { it.copy(cashProviderIndex = i, cashQuote = null, cashFlow = null) }
     fun quoteCashOut() {
-        val addr = wallet?.receiveAddress() ?: return
+        val addr = _state.value.address ?: return
         val s = _state.value
-        val amount = s.amountInput.replace(',', '.').toDoubleOrNull()
-            ?: run { _state.update { it.copy(error = "Invalid amount") }; return }
+        val amount = s.amountInput.replace(',', '.').toDoubleOrNull() ?: run { _state.update { it.copy(error = "Invalid amount") }; return }
         val provider = offRampProviders.getOrNull(s.cashProviderIndex) ?: return
         viewModelScope.launch {
-            _state.update { it.copy(busy = true, error = null) }
-            runCatching {
-                val req = OffRampQuoteRequest(amount, "BTC", s.cashCurrency, addr)
-                val q = provider.quote(req)
-                q to provider.buildHostedFlowUrl(req, q)
-            }.onSuccess { (q, flow) ->
-                _state.update { it.copy(cashQuote = q, cashFlow = flow, busy = false) }
-            }.onFailure { e ->
-                _state.update { it.copy(error = e.message, busy = false) }
-            }
+            runCatching { val req = OffRampQuoteRequest(amount, "BTC", s.cashCurrency, addr); val q = provider.quote(req); q to provider.buildHostedFlowUrl(req, q) }
+                .onSuccess { (q, f) -> _state.update { it.copy(cashQuote = q, cashFlow = f) } }.onFailure { fail(it) }
         }
     }
-
-    // --- Swap ---
     fun setSwapAssets(from: String, to: String) = _state.update { it.copy(swapFrom = from, swapTo = to, swapQuote = null, swapFlow = null) }
-
     fun quoteSwap() {
-        val addr = wallet?.receiveAddress() ?: return
+        val addr = _state.value.address ?: return
         val s = _state.value
-        val amount = s.amountInput.replace(',', '.').toDoubleOrNull()
-            ?: run { _state.update { it.copy(error = "Invalid amount") }; return }
-        val provider = swapProviders.first() // Changelly stub
+        val amount = s.amountInput.replace(',', '.').toDoubleOrNull() ?: run { _state.update { it.copy(error = "Invalid amount") }; return }
         viewModelScope.launch {
-            _state.update { it.copy(busy = true, error = null) }
-            runCatching {
-                val req = SwapQuoteRequest(s.swapFrom, s.swapTo, amount, addr)
-                val q = provider.quote(req)
-                q to provider.buildHostedFlowUrl(req, q)
-            }.onSuccess { (q, flow) ->
-                _state.update { it.copy(swapQuote = q, swapFlow = flow, busy = false) }
-            }.onFailure { e ->
-                _state.update { it.copy(error = e.message, busy = false) }
-            }
+            runCatching { val p = swapProviders.first(); val req = SwapQuoteRequest(s.swapFrom, s.swapTo, amount, addr); val q = p.quote(req); q to p.buildHostedFlowUrl(req, q) }
+                .onSuccess { (q, f) -> _state.update { it.copy(swapQuote = q, swapFlow = f) } }.onFailure { fail(it) }
         }
     }
 }

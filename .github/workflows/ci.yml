@@ -2,8 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ "FaltynIvo", "elfall-rebuild" ]
+    branches: [ "FaltynIvo", "eleanor-rebuild" ]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,26 +15,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
+        with: { distribution: temurin, java-version: "17" }
       - uses: gradle/actions/setup-gradle@v4
-      - name: Unit tests (shared) + Android debug build (testnet)
-        run: ./gradlew :shared:testDebugUnitTest :androidApp:assembleBitcoinTestnetDebug --console=plain
+      - name: Shared unit tests + Android debug builds (testnet)
+        run: ./gradlew :shared:testDebugUnitTest :androidApp:assembleEleanorBitcoinTestnetDebug :androidApp:assembleElfallBitcoinTestnetDebug --console=plain
       - uses: actions/upload-artifact@v4
         with:
-          name: elfall-testnet-debug-apk
-          path: androidApp/build/outputs/apk/bitcoinTestnet/debug/*.apk
+          name: eleanor-standalone-testnet-apk
+          path: androidApp/build/outputs/apk/eleanorBitcoinTestnet/debug/*.apk
 
-  ios-framework:
+  ios-simulator:
     runs-on: macos-14
-    continue-on-error: true   # iOS side is a skeleton for now
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
+        with: { distribution: temurin, java-version: "17" }
       - uses: gradle/actions/setup-gradle@v4
-      - name: Link shared framework for iOS simulator
+      - name: Build Shared framework (iOS simulator arm64)
         run: ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64 --console=plain
+      - name: Generate Xcode project
+        run: brew install xcodegen && cd iosApp && xcodegen generate
+      - name: Build Eleanor.app (simulator, unsigned)
+        run: |
+          cd iosApp
+          xcodebuild -project Eleanor.xcodeproj -scheme Eleanor -sdk iphonesimulator -arch arm64 \
+            -configuration Debug -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+          cd build/Build/Products/Debug-iphonesimulator && zip -r "$GITHUB_WORKSPACE/Eleanor-simulator.app.zip" Eleanor.app
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eleanor-ios-simulator-app
+          path: Eleanor-simulator.app.zip

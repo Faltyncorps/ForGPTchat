@@ -33,6 +33,9 @@ class EsploraClient(
     private val baseUrl: String,
     private val http: HttpClient = defaultHttpClient(),
 ) {
+    internal val base get() = baseUrl
+    internal val httpClient get() = http
+
     suspend fun utxos(address: String): List<Utxo> = http.get("$baseUrl/address/$address/utxo").body()
 
     suspend fun balanceSats(address: String): Long = utxos(address).sumOf { it.value }

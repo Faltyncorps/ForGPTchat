@@ -6,26 +6,44 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import cz.faltyn.elfall.shared.offramp.FiatCurrency
-import cz.faltyn.elfall.shared.network.ElfallNetwork
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
+import cz.faltyn.elfall.shared.BtcNetwork
+import cz.faltyn.elfall.shared.Bip21
+import cz.faltyn.elfall.shared.HistoryItem
 import cz.faltyn.elfall.shared.assets.FLC_REFERENCE_DISCLAIMER_CS
+import cz.faltyn.elfall.shared.network.ElfallNetwork
+import cz.faltyn.elfall.shared.offramp.FiatCurrency
 import cz.faltyn.elfall.shared.offramp.OffRampValidation
 import cz.faltyn.elfall.shared.satsToBtcString
+import java.text.SimpleDateFormat
+import java.util.Date
 
 class MainActivity : AppCompatActivity() {
     private val vm: WalletViewModel by viewModels()
+
+    private val scanLauncher = registerForActivityResult(ScanContract()) { r -> r.contents?.let(vm::onScanned) }
+
+    private fun auth(title: String, then: () -> Unit) =
+        BiometricGate.confirm(this, title, getString(R.string.biometric_subtitle)) { ok, err ->
+            if (ok) then() else err?.let { vm.onAuthError(it) }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,190 +51,198 @@ class MainActivity : AppCompatActivity() {
             MaterialTheme {
                 Surface(Modifier.fillMaxSize()) {
                     val s by vm.state.collectAsStateWithLifecycle()
-                    ElfallScreen(s, vm, onConfirmTransfer = {
-                        BiometricGate.confirm(
-                            this,
-                            getString(R.string.biometric_title),
-                            getString(R.string.biometric_subtitle),
-                        ) { ok, _ -> if (ok) vm.sendTransferConfirmed() }
-                    })
+                    AppScreen(
+                        s, vm,
+                        authThen = ::auth,
+                        onScan = {
+                            scanLauncher.launch(ScanOptions().setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                                .setPrompt("BTC / BIP21 / Stellar").setBeepEnabled(false).setOrientationLocked(true))
+                        },
+                    )
                 }
             }
         }
     }
+
+    override fun onStop() { super.onStop(); if (!isChangingConfigurations) vm.lock() }
 }
 
+private val dateFmt = SimpleDateFormat("yyyy-MM-dd HH:mm")
+
 @Composable
-fun ElfallScreen(s: UiState, vm: WalletViewModel, onConfirmTransfer: () -> Unit) {
+fun AppScreen(s: UiState, vm: WalletViewModel, authThen: (String, () -> Unit) -> Unit, onScan: () -> Unit) {
     val ctx = LocalContext.current
     fun openUrl(url: String) = ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
 
-    Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(stringResource(R.string.wallet_title), style = MaterialTheme.typography.headlineSmall)
-        Text("BTC chain: ${s.network.name}", style = MaterialTheme.typography.labelMedium)
-        Text("ELFALL síť / network")
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ElfallNetwork.entries.forEach { n ->
-                FilterChip(
-                    selected = s.elfallNetwork == n,
-                    onClick = { vm.setElfallNetwork(n) },
-                    enabled = n != ElfallNetwork.MAINNET || s.elfallNetwork == ElfallNetwork.MAINNET,
-                    label = { Text(n.displayName) },
-                )
-            }
-        }
-        Text("Stellar testnet assety: ${vm.stellarAssetLabels().joinToString()}", style = MaterialTheme.typography.bodySmall)
-        Text("FLC ref: ${vm.flcReferenceUsd} USD — $FLC_REFERENCE_DISCLAIMER_CS", style = MaterialTheme.typography.bodySmall)
+    Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall)
+        Text("BTC: ${s.network.name}" + if (s.standalone) " · standalone" else "", style = MaterialTheme.typography.labelMedium)
         s.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        s.info?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
 
-        if (!s.hasWallet) {
-            var restore by remember { mutableStateOf("") }
-            Button(onClick = vm::createWallet) { Text(stringResource(R.string.create_wallet)) }
-            OutlinedTextField(restore, { restore = it }, label = { Text(stringResource(R.string.restore_wallet)) }, modifier = Modifier.fillMaxWidth())
-            OutlinedButton(onClick = { vm.restoreWallet(restore) }) { Text(stringResource(R.string.restore_wallet)) }
+        if (!s.standalone) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ElfallNetwork.entries.forEach { n ->
+                    FilterChip(selected = s.elfallNetwork == n, onClick = { vm.setElfallNetwork(n) }, label = { Text(n.displayName) })
+                }
+            }
+            Text("Stellar testnet: ${vm.stellarAssetLabels().joinToString()}", style = MaterialTheme.typography.bodySmall)
+            Text("FLC ref ${vm.flcReferenceUsd} USD — $FLC_REFERENCE_DISCLAIMER_CS", style = MaterialTheme.typography.bodySmall)
+        }
+
+        // Network info is readable without unlocking
+        if (!s.unlocked) {
+            if (s.hasSeed) {
+                Button(onClick = { authThen("Odemknout / Unlock") { vm.unlockAfterAuth() } }) { Text("Odemknout peněženku / Unlock") }
+            } else {
+                var restore by remember { mutableStateOf("") }
+                Button(onClick = { authThen("Nová peněženka") { vm.createWalletAfterAuth() } }) { Text(stringResource(R.string.create_wallet)) }
+                OutlinedTextField(restore, { restore = it }, label = { Text(stringResource(R.string.restore_wallet)) }, modifier = Modifier.fillMaxWidth())
+                OutlinedButton(onClick = { authThen("Obnovit") { vm.restoreWalletAfterAuth(restore) } }) { Text(stringResource(R.string.restore_wallet)) }
+            }
+            HorizontalDivider()
+            NetworkPanel(s, vm)
             return@Column
         }
 
+        if (!s.authBound) Text("⚠ Zařízení nemá zámek obrazovky — klíč není vázán na biometrii.", color = MaterialTheme.colorScheme.error)
+
         s.newMnemonic?.let { words ->
-            Card {
-                Column(Modifier.padding(12.dp)) {
-                    Text(stringResource(R.string.backup_warning))
-                    Text(words.joinToString(" "), style = MaterialTheme.typography.bodyLarge)
-                    Button(onClick = vm::backupConfirmed) { Text("I wrote them down / Zapsáno") }
-                }
-            }
+            Card { Column(Modifier.padding(12.dp)) {
+                Text(stringResource(R.string.backup_warning))
+                Text(words.joinToString(" "), style = MaterialTheme.typography.bodyLarge)
+                Button(onClick = vm::backupConfirmed) { Text("Zapsáno / I wrote them down") }
+            } }
         }
 
-        Text(stringResource(R.string.receive_address)); SelectionText(s.address.orEmpty())
         Text("${stringResource(R.string.wallet_balance)}: ${s.balanceSats?.satsToBtcString() ?: "…"} BTC")
-        OutlinedButton(onClick = vm::refresh) { Text(stringResource(R.string.refresh)) }
 
-        // Mode tabs
-        ScrollableTabRow(selectedTabIndex = s.mode.ordinal) {
-            AppMode.entries.forEach { mode ->
-                Tab(
-                    selected = s.mode == mode,
-                    onClick = { vm.setMode(mode) },
-                    text = {
-                        Text(
-                            when (mode) {
-                                AppMode.RECEIVE -> stringResource(R.string.mode_receive)
-                                AppMode.TRANSFER -> stringResource(R.string.mode_transfer)
-                                AppMode.SWAP -> stringResource(R.string.mode_swap)
-                                AppMode.WITHDRAW_CARD -> stringResource(R.string.mode_withdraw_card)
-                            }
-                        )
-                    },
-                )
+        ScrollableTabRow(selectedTabIndex = s.modes.indexOf(s.mode).coerceAtLeast(0)) {
+            s.modes.forEach { m ->
+                Tab(selected = s.mode == m, onClick = { vm.setMode(m) }, text = { Text(label(m)) })
             }
         }
 
         when (s.mode) {
             AppMode.RECEIVE -> {
-                Text("Share the address above to receive BTC / Sdílejte adresu výše pro příjem BTC.")
+                val addr = s.address.orEmpty()
+                Text("${stringResource(R.string.receive_address)} (#${s.addressIndex})")
+                SelectionContainer { Text(addr) }
+                if (addr.isNotEmpty()) {
+                    val bmp = remember(addr) { QrCode.bitmap(Bip21.build(addr)) }
+                    Image(bmp.asImageBitmap(), contentDescription = "QR", modifier = Modifier.size(240.dp))
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = vm::nextAddress) { Text("Nová adresa / New address") }
+                    OutlinedButton(onClick = vm::refresh) { Text(stringResource(R.string.refresh)) }
+                }
             }
-
             AppMode.TRANSFER -> {
                 Text(stringResource(R.string.transfer_title), style = MaterialTheme.typography.titleMedium)
-                OutlinedTextField(
-                    s.transferAddress, vm::onTransferAddressChange,
-                    label = { Text(stringResource(R.string.destination_address)) },
-                    isError = s.addressError != null,
-                    supportingText = { s.addressError?.let { Text(it) } },
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                OutlinedButton(onClick = onScan) { Text("Skenovat QR / Scan QR") }
+                OutlinedTextField(s.transferAddress, vm::onTransferAddressChange, label = { Text(stringResource(R.string.destination_address)) },
+                    isError = s.addressError != null, supportingText = { s.addressError?.let { Text(it) } }, modifier = Modifier.fillMaxWidth())
                 TextButton(onClick = vm::saveTransferAddress) { Text(stringResource(R.string.save_address)) }
                 AmountField(s.amountInput, vm::onAmountChange)
-                Button(onClick = vm::previewTransfer, enabled = !s.busy && s.addressError == null && s.transferAddress.isNotBlank()) {
-                    Text(stringResource(R.string.preview_fee))
-                }
+                Button(onClick = vm::previewTransfer, enabled = !s.busy && s.addressError == null && s.transferAddress.isNotBlank()) { Text(stringResource(R.string.preview_fee)) }
                 s.transferPreview?.let { p ->
-                    Card {
-                        Column(Modifier.padding(12.dp)) {
-                            Text("To: ${p.destination}")
-                            Text("Amount: ${p.amountSats.satsToBtcString()} BTC")
-                            Text("Fee: ${p.feeSats} sats (${p.feeRateSatPerVb} sat/vB)")
-                            Button(onClick = onConfirmTransfer, enabled = !s.busy) { Text(stringResource(R.string.confirm_send)) }
-                        }
-                    }
+                    Card { Column(Modifier.padding(12.dp)) {
+                        Text("To: ${p.destination}"); Text("Amount: ${p.amountSats.satsToBtcString()} BTC")
+                        Text("Fee: ${p.feeSats} sats (${p.feeRateSatPerVb} sat/vB)")
+                        Button(onClick = { authThen(ctx.getString(R.string.biometric_title)) { vm.sendTransferConfirmed() } }, enabled = !s.busy) { Text(stringResource(R.string.confirm_send)) }
+                    } }
                 }
-                s.lastTxid?.let { Text("Sent / Odesláno: $it") }
+                s.lastTxid?.let { Text("Odesláno / Sent: $it", modifier = Modifier.clickable { openUrl("${s.network.explorerUrl}/tx/$it") }) }
             }
-
+            AppMode.HISTORY -> {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = vm::loadHistory) { Text(stringResource(R.string.refresh)) }
+                    if (s.busy) CircularProgressIndicator(Modifier.size(24.dp))
+                }
+                Text("Bitcoin", style = MaterialTheme.typography.titleSmall)
+                if (s.history.isEmpty()) Text("Žádné transakce / No transactions")
+                s.history.forEach { HistoryRow(it, "BTC", ::openUrl) }
+                HorizontalDivider()
+                Text("Stellar (testnet, jen čtení)", style = MaterialTheme.typography.titleSmall)
+                OutlinedTextField(s.stellarAccount, vm::onStellarAccountChange, label = { Text("Stellar účet G…") }, modifier = Modifier.fillMaxWidth())
+                s.stellarHistory.forEach { HistoryRow(it, it.asset, ::openUrl) }
+            }
+            AppMode.NETWORK -> NetworkPanel(s, vm)
             AppMode.WITHDRAW_CARD -> {
                 Text(stringResource(R.string.withdraw_card_title), style = MaterialTheme.typography.titleMedium)
                 Text(stringResource(R.string.withdraw_card_hint), style = MaterialTheme.typography.bodySmall)
-                Text(stringResource(R.string.currency))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FiatCurrency.supported.forEach { c ->
-                        FilterChip(
-                            selected = s.cashCurrency == c,
-                            onClick = { vm.setCashCurrency(c) },
-                            label = { Text(c.code) },
-                        )
-                    }
+                    FiatCurrency.supported.forEach { c -> FilterChip(selected = s.cashCurrency == c, onClick = { vm.setCashCurrency(c) }, label = { Text(c.code) }) }
                 }
-                Text(stringResource(R.string.provider))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    vm.offRampProviderNames.forEachIndexed { i, name ->
-                        FilterChip(
-                            selected = s.cashProviderIndex == i,
-                            onClick = { vm.setCashProvider(i) },
-                            label = { Text(name) },
-                        )
-                    }
+                    vm.offRampProviderNames.forEachIndexed { i, n -> FilterChip(selected = s.cashProviderIndex == i, onClick = { vm.setCashProvider(i) }, label = { Text(n) }) }
                 }
                 AmountField(s.amountInput, vm::onAmountChange)
-                Button(onClick = vm::quoteCashOut, enabled = !s.busy) { Text(stringResource(R.string.get_quote)) }
-                s.cashQuote?.let { q ->
-                    Card {
-                        Column(Modifier.padding(12.dp)) {
-                            Text("${q.amountCrypto} ${q.cryptoAsset} → ${OffRampValidation.formatFiat(q.fiatNetMinor, q.currency)}")
-                            Text("Fee / Poplatek: ${OffRampValidation.formatFiat(q.feeMinor, q.currency)}")
-                            Text("Rate: 1 BTC ≈ ${q.rate} ${q.currency.code}")
-                            if (q.notes.isNotBlank()) Text(q.notes, style = MaterialTheme.typography.bodySmall)
-                            s.cashFlow?.let { flow ->
-                                Button(onClick = { openUrl(flow.url) }) {
-                                    Text(stringResource(R.string.open_provider))
-                                }
-                            }
-                        }
-                    }
-                }
+                Button(onClick = vm::quoteCashOut) { Text(stringResource(R.string.get_quote)) }
+                s.cashQuote?.let { q -> Card { Column(Modifier.padding(12.dp)) {
+                    Text("${q.amountCrypto} ${q.cryptoAsset} → ${OffRampValidation.formatFiat(q.fiatNetMinor, q.currency)}")
+                    if (q.notes.isNotBlank()) Text(q.notes, style = MaterialTheme.typography.bodySmall)
+                    s.cashFlow?.let { f -> Button(onClick = { openUrl(f.url) }) { Text(stringResource(R.string.open_provider)) } }
+                } } }
             }
-
             AppMode.SWAP -> {
-                Text(stringResource(R.string.swap_title), style = MaterialTheme.typography.titleMedium)
                 Text(stringResource(R.string.swap_hint), style = MaterialTheme.typography.bodySmall)
-                OutlinedTextField(s.swapFrom, { vm.setSwapAssets(it, s.swapTo) }, label = { Text(stringResource(R.string.from_asset)) }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(s.swapTo, { vm.setSwapAssets(s.swapFrom, it) }, label = { Text(stringResource(R.string.to_asset)) }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(s.swapFrom, { vm.setSwapAssets(it, s.swapTo) }, label = { Text(stringResource(R.string.from_asset)) })
+                OutlinedTextField(s.swapTo, { vm.setSwapAssets(s.swapFrom, it) }, label = { Text(stringResource(R.string.to_asset)) })
                 AmountField(s.amountInput, vm::onAmountChange)
-                Button(onClick = vm::quoteSwap, enabled = !s.busy) { Text(stringResource(R.string.get_quote)) }
-                s.swapQuote?.let { q ->
-                    Card {
-                        Column(Modifier.padding(12.dp)) {
-                            Text("${q.amountIn} ${q.fromAsset} → ~${q.amountOut} ${q.toAsset}")
-                            Text(q.feeNote)
-                            s.swapFlow?.let { flow ->
-                                Button(onClick = { openUrl(flow.url) }) { Text(stringResource(R.string.open_provider)) }
-                            }
-                        }
-                    }
-                }
+                Button(onClick = vm::quoteSwap) { Text(stringResource(R.string.get_quote)) }
+                s.swapQuote?.let { q -> Text("${q.amountIn} ${q.fromAsset} → ~${q.amountOut} ${q.toAsset}") }
+                s.swapFlow?.let { f -> Button(onClick = { openUrl(f.url) }) { Text(stringResource(R.string.open_provider)) } }
             }
+        }
+        OutlinedButton(onClick = vm::lock) { Text("Zamknout / Lock") }
+    }
+}
+
+@Composable
+private fun NetworkPanel(s: UiState, vm: WalletViewModel) {
+    LaunchedEffect(Unit) { if (s.snapshot == null) vm.loadNetworkInfo() }
+    Text("Síť / Network (jen informace)", style = MaterialTheme.typography.titleMedium)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf(BtcNetwork.TESTNET, BtcNetwork.MAINNET).forEach { n ->
+            FilterChip(selected = s.infoNetwork == n, onClick = { vm.setInfoNetwork(n) }, label = { Text(n.name.lowercase()) })
+        }
+        OutlinedButton(onClick = vm::loadNetworkInfo) { Text("↻") }
+    }
+    if (s.infoNetwork == BtcNetwork.MAINNET) Text("Mainnet data jen pro zobrazení — žádné podepisování.", style = MaterialTheme.typography.bodySmall)
+    val snap = s.snapshot ?: run { Text("Načítám… / Loading…"); return }
+    Text("Poplatky (sat/vB): rychle ${snap.fees.fastestFee} · 30 min ${snap.fees.halfHourFee} · 1 h ${snap.fees.hourFee}")
+    Text("Mempool: ${snap.mempool.count} tx · ${snap.mempool.vsize / 1_000_000.0} MvB")
+    Text("Výška bloku / Block height: ${snap.tipHeight}")
+    snap.prices?.let { p -> Text("BTC (mainnet trh): ${p.usd?.toLong() ?: "?"} USD · ${p.eur?.toLong() ?: "?"} EUR" + (p.czk?.let { " · ${it.toLong()} CZK" } ?: "")) }
+    Text("Poslední bloky:", style = MaterialTheme.typography.titleSmall)
+    snap.recentBlocks.forEach { b -> Text("#${b.height} · ${b.txCount} tx · ${dateFmt.format(Date(b.timestamp * 1000))}", style = MaterialTheme.typography.bodySmall) }
+}
+
+@Composable
+private fun HistoryRow(h: HistoryItem, asset: String, open: (String) -> Unit) {
+    Card(Modifier.fillMaxWidth().clickable { open(h.explorerUrl) }) {
+        Column(Modifier.padding(10.dp)) {
+            Text("${if (asset == "BTC" && h.netSats > 0) "+" else ""}${h.amountText} $asset")
+            Text("${if (h.confirmations > 0) "${h.confirmations} potvrzení" else "nepotvrzeno"} · ${h.timeEpochSec?.let { dateFmt.format(Date(it * 1000)) } ?: "mempool"}",
+                style = MaterialTheme.typography.bodySmall)
+            Text(h.id.take(16) + "…", style = MaterialTheme.typography.labelSmall)
         }
     }
 }
 
 @Composable
-private fun AmountField(value: String, onChange: (String) -> Unit) {
-    OutlinedTextField(
-        value, onChange,
-        label = { Text(stringResource(R.string.amount_btc)) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        modifier = Modifier.fillMaxWidth(),
-    )
+private fun label(m: AppMode) = when (m) {
+    AppMode.RECEIVE -> stringResource(R.string.mode_receive)
+    AppMode.TRANSFER -> stringResource(R.string.mode_transfer)
+    AppMode.HISTORY -> "Historie / History"
+    AppMode.NETWORK -> "Síť / Network"
+    AppMode.SWAP -> stringResource(R.string.mode_swap)
+    AppMode.WITHDRAW_CARD -> stringResource(R.string.mode_withdraw_card)
 }
 
 @Composable
-private fun SelectionText(t: String) = androidx.compose.foundation.text.selection.SelectionContainer { Text(t) }
+private fun AmountField(value: String, onChange: (String) -> Unit) = OutlinedTextField(
+    value, onChange, label = { Text(stringResource(R.string.amount_btc)) },
+    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth(),
+)

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ELFALL</string>
     <string name="wallet_title">ELFALL</string>
     <string name="create_wallet">Create new wallet / Nová peněženka</string>
     <string name="restore_wallet">Restore from 12 words / Obnovit</string>

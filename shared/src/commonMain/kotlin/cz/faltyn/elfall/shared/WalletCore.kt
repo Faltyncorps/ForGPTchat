@@ -27,6 +27,9 @@ class WalletCore private constructor(private val seed: ByteArray, val network: B
     fun receiveAddress(index: Long = 0): String =
         Bitcoin.computeBIP84Address(receivePublicKey(index), network.chainHash)
 
+    /** First [count] receive addresses (BIP84 external chain), for gap-limit scanning and "new address". */
+    fun receiveAddresses(count: Int, start: Long = 0): List<String> = (start until start + count).map { receiveAddress(it) }
+
     /** Watch-only account xpub (safe to share, e.g. with the read-only elfall-mcp server). */
     fun accountXpub(): String = account.extendedPublicKey.encode(
         if (network == BtcNetwork.MAINNET) DeterministicWallet.zpub else DeterministicWallet.vpub,
@@ -35,6 +38,9 @@ class WalletCore private constructor(private val seed: ByteArray, val network: B
     companion object {
         fun newMnemonic(random: Random = secureRandom()): List<String> =
             MnemonicCode.toMnemonics(random.nextBytes(16)) // 12 words
+
+        /** Swift-friendly: 12-word mnemonic from the platform CSPRNG. */
+        fun generateMnemonic(): List<String> = newMnemonic()
 
         fun fromMnemonic(words: List<String>, network: BtcNetwork, passphrase: String = ""): WalletCore {
             MnemonicCode.validate(words)
