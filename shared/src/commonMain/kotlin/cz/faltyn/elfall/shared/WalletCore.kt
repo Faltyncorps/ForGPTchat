@@ -1,4 +1,4 @@
-package cz.faltyn.eleanor.shared
+package cz.faltyn.elfall.shared
 
 import fr.acinq.bitcoin.Bitcoin
 import fr.acinq.bitcoin.DeterministicWallet
@@ -27,7 +27,7 @@ class WalletCore private constructor(private val seed: ByteArray, val network: B
     fun receiveAddress(index: Long = 0): String =
         Bitcoin.computeBIP84Address(receivePublicKey(index), network.chainHash)
 
-    /** Watch-only account xpub (safe to share, e.g. with the read-only eleanor-mcp server). */
+    /** Watch-only account xpub (safe to share, e.g. with the read-only elfall-mcp server). */
     fun accountXpub(): String = account.extendedPublicKey.encode(
         if (network == BtcNetwork.MAINNET) DeterministicWallet.zpub else DeterministicWallet.vpub,
     )

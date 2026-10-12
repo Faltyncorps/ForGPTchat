@@ -1,10 +1,10 @@
-package cz.faltyn.eleanor.android
+package cz.faltyn.elfall.android
 
 import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
-import cz.faltyn.eleanor.shared.SeedStore
+import cz.faltyn.elfall.shared.SeedStore
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -17,8 +17,8 @@ import javax.crypto.spec.GCMParameterSpec
  * TODO: bind the key to biometric auth (setUserAuthenticationRequired) once the unlock flow uses CryptoObject.
  */
 class KeystoreSeedStore(context: Context) : SeedStore {
-    private val prefs = context.getSharedPreferences("eleanor_secure", Context.MODE_PRIVATE)
-    private val alias = "eleanor_seed_key"
+    private val prefs = context.getSharedPreferences("elfall_secure", Context.MODE_PRIVATE)
+    private val alias = "elfall_seed_key"
 
     private fun key(): SecretKey {
         val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }

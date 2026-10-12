@@ -1,4 +1,4 @@
-package cz.faltyn.eleanor.shared
+package cz.faltyn.elfall.shared
 
 import fr.acinq.bitcoin.Bitcoin
 import fr.acinq.bitcoin.utils.Either

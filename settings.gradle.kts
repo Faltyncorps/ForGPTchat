@@ -1,4 +1,4 @@
-rootProject.name = "eleanor"
+rootProject.name = "elfall"
 
 pluginManagement {
     repositories {

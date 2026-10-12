@@ -1,4 +1,4 @@
-package cz.faltyn.eleanor.android
+package cz.faltyn.elfall.android
 
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG

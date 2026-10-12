@@ -1,4 +1,4 @@
-package cz.faltyn.eleanor.shared
+package cz.faltyn.elfall.shared
 
 const val SATS_PER_BTC = 100_000_000L
 

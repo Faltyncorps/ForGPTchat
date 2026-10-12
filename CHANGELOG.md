@@ -1,6 +1,21 @@
-# ELEANOR Bitcoin Wallet – Changelog
+# ELFALL – Changelog
 
-## 0.2.0 – eleanor-rebuild (unreleased)
+## 0.3.0 – ELFALL product rename + card cash-out (unreleased)
+### Changed
+- Product branding: **ELFALL** (Eleanor + Fallcoin). Package `cz.faltyn.elfall`.
+- Cash-out path: **Withdraw to card** only (CZK / EUR / USD) via hosted provider stubs (MoonPay Sell, Transak, Ramp). Card details/KYC never touch the app.
+- Former "withdraw to my BTC address" is now **Transfer** (crypto→crypto send).
+
+### Added
+- `shared/.../offramp` (`OffRampProvider`, `FiatCurrency`, stub providers, validation).
+- `shared/.../swap` (Changelly widget stub, THORChain docs stub).
+- `TransferService` façade over the on-chain send engine.
+- Android UI modes: Receive / Transfer / Swap / Withdraw to card.
+- Unit tests for fiat currency enum and quote validation.
+- `docs/elfall-architecture.md` (bilingual).
+
+
+## 0.2.0 – elfall-rebuild (unreleased)
 ### Removed
 - Bank / CZK withdrawal flow (Partners banka / Anycoin M.P.), the hard-coded bank account, and the
   `banking_api_key` / `banking_api_secret` credentials.
@@ -17,4 +32,4 @@
 - Gradle wrapper and build files, AndroidManifest, unit tests (BIP84 test vector, validation, coin selection, signing), GitHub Actions CI.
 
 ## 1.0.0 – 2026-09-02 (original skeleton)
-- Initial ELEANOR code drop (incomplete: missing build files, manifest and several referenced classes; did not compile).
+- Initial ELFALL code drop (incomplete: missing build files, manifest and several referenced classes; did not compile).

@@ -1,4 +1,4 @@
-package cz.faltyn.eleanor.shared
+package cz.faltyn.elfall.shared
 
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf

@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "cz.faltyn.eleanor.android"
+    namespace = "cz.faltyn.elfall.android"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "cz.faltyn.eleanor"
+        applicationId = "cz.faltyn.elfall"
         minSdk = 26
         targetSdk = 35
         versionCode = 2

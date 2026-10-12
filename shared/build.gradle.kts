@@ -26,6 +26,7 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
         }
         androidMain.dependencies {
             // Native secp256k1 for Android (bitcoin-kmp's JVM artifact needs a JNI backend)
@@ -39,7 +40,7 @@ kotlin {
 }
 
 android {
-    namespace = "cz.faltyn.eleanor.shared"
+    namespace = "cz.faltyn.elfall.shared"
     compileSdk = 35
     defaultConfig { minSdk = 26 }
     compileOptions {

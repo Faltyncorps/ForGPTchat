@@ -1,4 +1,4 @@
-package cz.faltyn.eleanor.shared
+package cz.faltyn.elfall.shared
 
 /**
  * Platform secure storage for the BIP39 mnemonic and user preferences.

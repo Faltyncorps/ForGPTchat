@@ -1,4 +1,4 @@
-package cz.faltyn.eleanor.shared
+package cz.faltyn.elfall.shared
 
 import fr.acinq.bitcoin.Bitcoin
 import fr.acinq.bitcoin.OutPoint
@@ -25,8 +25,10 @@ data class FeePreview(
 }
 
 /**
- * "Withdraw to my crypto wallet": send BTC from this wallet to a user-entered / saved external BTC address.
- * Replaces the former bank/CZK withdrawal flow (removed).
+ * Low-level BTC send engine (P2WPKH build + sign + broadcast).
+ *
+ * UI naming: call this a **Transfer** (převod), not a withdrawal.
+ * Cash-out / "Výběr" is card-only via [cz.faltyn.elfall.shared.offramp.OffRampProvider].
  */
 class WithdrawService(private val wallet: WalletCore, private val esplora: EsploraClient) {
 

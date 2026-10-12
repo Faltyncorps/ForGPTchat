@@ -1,4 +1,4 @@
-package cz.faltyn.eleanor.shared
+package cz.faltyn.elfall.shared
 
 import kotlin.test.Test
 import kotlin.test.assertEquals

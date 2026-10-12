@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ "FaltynIvo", "eleanor-rebuild" ]
+    branches: [ "FaltynIvo", "elfall-rebuild" ]
   pull_request:
 
 permissions:
@@ -22,7 +22,7 @@ jobs:
         run: ./gradlew :shared:testDebugUnitTest :androidApp:assembleBitcoinTestnetDebug --console=plain
       - uses: actions/upload-artifact@v4
         with:
-          name: eleanor-testnet-debug-apk
+          name: elfall-testnet-debug-apk
           path: androidApp/build/outputs/apk/bitcoinTestnet/debug/*.apk
 
   ios-framework:
