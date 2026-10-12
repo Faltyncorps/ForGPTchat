@@ -86,7 +86,8 @@ object OffRampValidation {
     }
 
     fun formatFiat(minor: Long, currency: FiatCurrency): String {
-        val major = minor / 100.0
-        return "%s %.2f".format(currency.code, major)
+        val sign = if (minor < 0) "-" else ""
+        val abs = kotlin.math.abs(minor)
+        return "${currency.code} $sign${abs / 100}.${(abs % 100).toString().padStart(2, '0')}"
     }
 }
