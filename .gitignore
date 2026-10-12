@@ -15,3 +15,5 @@ iosApp/Pods/
 runpod/.venv/
 scripts/flc_keys.json
 scripts/.env
+__pycache__/
+*.pyc
