@@ -12,3 +12,6 @@ iosApp/Pods/
 *.keystore
 *.jks
 .env
+runpod/.venv/
+scripts/flc_keys.json
+scripts/.env

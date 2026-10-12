@@ -1,5 +1,13 @@
 # ELFALL – Changelog
 
+## 0.4.0 – RunPod testnet network + FLC/yFLC
+### Added
+- `runpod/` serverless worker (BTC mempool testnet, Stellar Horizon testnet, Sepolia, Solana devnet, Polygon Amoy) + pytest.
+- `scripts/issue_flc_testnet.py` — issue FLC/yFLC on Stellar testnet via Friendbot (secrets gitignored).
+- `docs/elfall-network.md` (CZ-first): architecture, mainnet checklist, cost note ($0 → no deploy).
+- Kotlin `DevAssets` (tBTC, XLM, sepETH, SOL, MATIC, FLC, yFLC) + `ElfallNetwork` selector (mainnet locked).
+- Display-only FLC reference 9.33 USD with explicit non-peg disclaimer.
+
 ## 0.3.1 – Anycoin primary + Stellar SEP-7 (LOBSTR/Freighter) + Google Wallet honesty
 ### Added
 - `AnycoinProvider` as primary off-ramp (hosted web/app; no public API — partner contact required).

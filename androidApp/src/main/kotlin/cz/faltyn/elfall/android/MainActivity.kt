@@ -19,6 +19,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cz.faltyn.elfall.shared.offramp.FiatCurrency
+import cz.faltyn.elfall.shared.network.ElfallNetwork
+import cz.faltyn.elfall.shared.assets.FLC_REFERENCE_DISCLAIMER_CS
 import cz.faltyn.elfall.shared.offramp.OffRampValidation
 import cz.faltyn.elfall.shared.satsToBtcString
 
@@ -51,7 +53,20 @@ fun ElfallScreen(s: UiState, vm: WalletViewModel, onConfirmTransfer: () -> Unit)
 
     Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(stringResource(R.string.wallet_title), style = MaterialTheme.typography.headlineSmall)
-        Text("Network: ${s.network.name}", style = MaterialTheme.typography.labelMedium)
+        Text("BTC chain: ${s.network.name}", style = MaterialTheme.typography.labelMedium)
+        Text("ELFALL síť / network")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ElfallNetwork.entries.forEach { n ->
+                FilterChip(
+                    selected = s.elfallNetwork == n,
+                    onClick = { vm.setElfallNetwork(n) },
+                    enabled = n != ElfallNetwork.MAINNET || s.elfallNetwork == ElfallNetwork.MAINNET,
+                    label = { Text(n.displayName) },
+                )
+            }
+        }
+        Text("Stellar testnet assety: ${vm.stellarAssetLabels().joinToString()}", style = MaterialTheme.typography.bodySmall)
+        Text("FLC ref: ${vm.flcReferenceUsd} USD — $FLC_REFERENCE_DISCLAIMER_CS", style = MaterialTheme.typography.bodySmall)
         s.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 
         if (!s.hasWallet) {

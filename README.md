@@ -34,3 +34,8 @@ Kotlin Multiplatform (`shared/`), Jetpack Compose Android app, SwiftUI iOS skele
 ## License
 
 BSD 2-Clause.
+
+## Network / Síť (RunPod)
+
+See [docs/elfall-network.md](docs/elfall-network.md) (Czech-first). Local worker: `cd runpod && pip install -r requirements.txt && pytest && python local_runner.py health`.
+**Do not deploy to RunPod while balance is $0.**

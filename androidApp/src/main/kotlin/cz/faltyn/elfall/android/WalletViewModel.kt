@@ -6,6 +6,9 @@ import androidx.lifecycle.viewModelScope
 import cz.faltyn.elfall.shared.AddressCheck
 import cz.faltyn.elfall.shared.AddressValidator
 import cz.faltyn.elfall.shared.BtcNetwork
+import cz.faltyn.elfall.shared.assets.DevAssets
+import cz.faltyn.elfall.shared.assets.FLC_REFERENCE_USD
+import cz.faltyn.elfall.shared.network.ElfallNetwork
 import cz.faltyn.elfall.shared.EsploraClient
 import cz.faltyn.elfall.shared.TransferFeePreview
 import cz.faltyn.elfall.shared.TransferService
@@ -32,6 +35,7 @@ enum class AppMode { RECEIVE, TRANSFER, SWAP, WITHDRAW_CARD }
 
 data class UiState(
     val network: BtcNetwork = BtcNetwork.DEFAULT,
+    val elfallNetwork: ElfallNetwork = ElfallNetwork.DEFAULT,
     val mode: AppMode = AppMode.RECEIVE,
     val hasWallet: Boolean = false,
     val newMnemonic: List<String>? = null,
@@ -83,6 +87,21 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setMode(mode: AppMode) = _state.update { it.copy(mode = mode, error = null) }
+
+    /** Placeholder selector — MAINNET stays locked until rollout checklist is done. */
+    fun setElfallNetwork(n: ElfallNetwork) {
+        if (n == ElfallNetwork.MAINNET) {
+            _state.update { it.copy(error = "Mainnet je zatím zamčený / Mainnet locked — viz docs/elfall-network.md") }
+            return
+        }
+        _state.update { it.copy(elfallNetwork = n, error = null) }
+    }
+
+    fun stellarAssetLabels(): List<String> = DevAssets.stellarTestnetAssets().map { a ->
+        if (a.referenceUsd != null) "${a.symbol} (ref ${a.referenceUsd} USD, testnet)" else a.symbol
+    }
+
+    val flcReferenceUsd get() = FLC_REFERENCE_USD
 
     fun createWallet() {
         val words = WalletCore.newMnemonic()
