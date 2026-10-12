@@ -16,13 +16,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-enum class AppMode { RECEIVE, TRANSFER, HISTORY, NETWORK, SWAP, WITHDRAW_CARD }
+enum class AppMode { HOME, SETTINGS, RECEIVE, TRANSFER, HISTORY, NETWORK, SWAP, WITHDRAW_CARD }
 
 data class UiState(
     val standalone: Boolean = BuildConfig.STANDALONE,
     val network: BtcNetwork = BtcNetwork.DEFAULT,
     val elfallNetwork: ElfallNetwork = ElfallNetwork.DEFAULT,
-    val mode: AppMode = AppMode.RECEIVE,
+    val mode: AppMode = AppMode.HOME,
     val hasSeed: Boolean = false,
     val unlocked: Boolean = false,
     val authBound: Boolean = false,
@@ -57,7 +57,7 @@ data class UiState(
     val info: String? = null,
 ) {
     val modes: List<AppMode> get() =
-        if (standalone) listOf(AppMode.RECEIVE, AppMode.TRANSFER, AppMode.HISTORY, AppMode.NETWORK) else AppMode.entries
+        if (standalone) listOf(AppMode.RECEIVE, AppMode.TRANSFER, AppMode.HISTORY, AppMode.NETWORK) else AppMode.entries.filter { it != AppMode.HOME && it != AppMode.SETTINGS }
 }
 
 class WalletViewModel(app: Application) : AndroidViewModel(app) {

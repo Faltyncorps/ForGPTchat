@@ -16,6 +16,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -74,8 +77,8 @@ fun AppScreen(s: UiState, vm: WalletViewModel, authThen: (String, () -> Unit) ->
     val ctx = LocalContext.current
     fun openUrl(url: String) = ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
 
-    Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall)
+    Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Text("BTC: ${s.network.name}" + if (s.standalone) " · standalone" else "", style = MaterialTheme.typography.labelMedium)
         s.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         s.info?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
@@ -115,15 +118,20 @@ fun AppScreen(s: UiState, vm: WalletViewModel, authThen: (String, () -> Unit) ->
             } }
         }
 
-        Text("${stringResource(R.string.wallet_balance)}: ${s.balanceSats?.satsToBtcString() ?: "…"} BTC")
+        BalanceCard(s)
 
-        ScrollableTabRow(selectedTabIndex = s.modes.indexOf(s.mode).coerceAtLeast(0)) {
-            s.modes.forEach { m ->
-                Tab(selected = s.mode == m, onClick = { vm.setMode(m) }, text = { Text(label(m)) })
+        if (s.mode == AppMode.HOME) {
+            HomeGrid(s, onOpen = vm::setMode, onScan = onScan)
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = { vm.setMode(AppMode.HOME) }) { Text("← Domů") }
+                Text(label(s.mode), style = MaterialTheme.typography.titleLarge)
             }
         }
 
         when (s.mode) {
+            AppMode.HOME -> Unit
+            AppMode.SETTINGS -> SettingsPanel(s, vm)
             AppMode.RECEIVE -> {
                 val addr = s.address.orEmpty()
                 Text("${stringResource(R.string.receive_address)} (#${s.addressIndex})")
@@ -160,7 +168,7 @@ fun AppScreen(s: UiState, vm: WalletViewModel, authThen: (String, () -> Unit) ->
                     if (s.busy) CircularProgressIndicator(Modifier.size(24.dp))
                 }
                 Text("Bitcoin", style = MaterialTheme.typography.titleSmall)
-                if (s.history.isEmpty()) Text("Žádné transakce / No transactions")
+                if (s.history.isEmpty() && !s.busy) EmptyState("📭", "Zatím žádné transakce", "Pošlete si testovací BTC z faucetu na adresu v sekci Přijmout.")
                 s.history.forEach { HistoryRow(it, "BTC", ::openUrl) }
                 HorizontalDivider()
                 Text("Stellar (testnet, jen čtení)", style = MaterialTheme.typography.titleSmall)
@@ -195,7 +203,6 @@ fun AppScreen(s: UiState, vm: WalletViewModel, authThen: (String, () -> Unit) ->
                 s.swapFlow?.let { f -> Button(onClick = { openUrl(f.url) }) { Text(stringResource(R.string.open_provider)) } }
             }
         }
-        OutlinedButton(onClick = vm::lock) { Text("Zamknout / Lock") }
     }
 }
 
@@ -233,6 +240,8 @@ private fun HistoryRow(h: HistoryItem, asset: String, open: (String) -> Unit) {
 
 @Composable
 private fun label(m: AppMode) = when (m) {
+    AppMode.HOME -> "Domů"
+    AppMode.SETTINGS -> "Nastavení"
     AppMode.RECEIVE -> stringResource(R.string.mode_receive)
     AppMode.TRANSFER -> stringResource(R.string.mode_transfer)
     AppMode.HISTORY -> "Historie / History"
@@ -246,3 +255,77 @@ private fun AmountField(value: String, onChange: (String) -> Unit) = OutlinedTex
     value, onChange, label = { Text(stringResource(R.string.amount_btc)) },
     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth(),
 )
+
+private data class Activity(val emoji: String, val title: String, val subtitle: String, val mode: AppMode?)
+
+@Composable
+private fun HomeGrid(s: UiState, onOpen: (AppMode) -> Unit, onScan: () -> Unit) {
+    val items = buildList {
+        add(Activity("📥", "Přijmout", "Adresa a QR kód", AppMode.RECEIVE))
+        add(Activity("📤", "Převést", "Poslat BTC na adresu", AppMode.TRANSFER))
+        add(Activity("📷", "Skenovat QR", "BTC / BIP21 / Stellar", null))
+        add(Activity("🧾", "Historie", "Transakce a potvrzení", AppMode.HISTORY))
+        add(Activity("🌐", "Síť", "Poplatky, mempool, bloky", AppMode.NETWORK))
+        if (!s.standalone) {
+            add(Activity("🔁", "Směna", "Swap přes poskytovatele", AppMode.SWAP))
+            add(Activity("💳", "Výběr na kartu", "CZK / EUR / USD", AppMode.WITHDRAW_CARD))
+        }
+        add(Activity("⚙️", "Nastavení", "Zabezpečení a síť", AppMode.SETTINGS))
+    }
+    items.chunked(2).forEach { row ->
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            row.forEach { a ->
+                ElevatedCard(
+                    onClick = { a.mode?.let(onOpen) ?: onScan() },
+                    modifier = Modifier.weight(1f).heightIn(min = 108.dp),
+                ) {
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(a.emoji, style = MaterialTheme.typography.headlineSmall)
+                        Text(a.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text(a.subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+            if (row.size == 1) Spacer(Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun BalanceCard(s: UiState) = Card(
+    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+    modifier = Modifier.fillMaxWidth(),
+) {
+    Column(Modifier.padding(18.dp)) {
+        Text("Zůstatek", style = MaterialTheme.typography.labelLarge)
+        Text("${s.balanceSats?.satsToBtcString() ?: "…"} ${if (s.network == BtcNetwork.MAINNET) "BTC" else "tBTC"}",
+            style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text("Síť: ${s.network.name.lowercase()} · adresa #${s.addressIndex}", style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+@Composable
+private fun EmptyState(emoji: String, title: String, hint: String) = Column(
+    Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally,
+    verticalArrangement = Arrangement.spacedBy(6.dp),
+) {
+    Text(emoji, style = MaterialTheme.typography.displaySmall)
+    Text(title, style = MaterialTheme.typography.titleMedium)
+    Text(hint, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+}
+
+@Composable
+private fun SettingsPanel(s: UiState, vm: WalletViewModel) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Zabezpečení", style = MaterialTheme.typography.titleMedium)
+            Text(if (s.authBound) "✅ Klíč chráněn biometrií / zámkem obrazovky" else "⚠️ Bez zámku obrazovky – nastavte PIN/otisk")
+            Text("Seed je uložen jen v tomto zařízení (Android Keystore). Nikdy ho nesdílejte.", style = MaterialTheme.typography.bodySmall)
+            HorizontalDivider()
+            Text("Síť: ${s.network.name.lowercase()} (podpis jen na testnetu)")
+            Text("Verze: ${BuildConfig.VERSION_NAME}${if (s.standalone) " · Eleanor standalone" else " · ELFALL"}", style = MaterialTheme.typography.bodySmall)
+            Text("Podmínky použití: docs/terms-cs.md", style = MaterialTheme.typography.bodySmall)
+            OutlinedButton(onClick = vm::lock) { Text("🔒 Zamknout peněženku") }
+        }
+    }
+}
