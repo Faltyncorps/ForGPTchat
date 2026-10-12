@@ -1,5 +1,6 @@
 name: Eleanor
 options:
+  xcodeVersion: "15.0"
   bundleIdPrefix: cz.faltyn
   deploymentTarget:
     iOS: "16.0"
