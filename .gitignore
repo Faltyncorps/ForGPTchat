@@ -1,0 +1,14 @@
+.gradle/
+build/
+*/build/
+local.properties
+.idea/
+*.iml
+.DS_Store
+captures/
+.kotlin/
+iosApp/*.xcodeproj/xcuserdata/
+iosApp/Pods/
+*.keystore
+*.jks
+.env

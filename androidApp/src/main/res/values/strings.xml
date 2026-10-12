@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ELEANOR</string>
+    <string name="wallet_title">ELEANOR Bitcoin Wallet</string>
+    <string name="create_wallet">Create new wallet</string>
+    <string name="restore_wallet">Restore from 12 words</string>
+    <string name="wallet_balance">Balance</string>
+    <string name="receive_address">Your receive address</string>
+    <string name="refresh">Refresh</string>
+    <string name="withdraw_to_crypto_wallet">Withdraw to my crypto wallet</string>
+    <string name="destination_address">Destination BTC address</string>
+    <string name="save_address">Save as my payout address</string>
+    <string name="amount_btc">Amount (BTC)</string>
+    <string name="preview_fee">Preview fee</string>
+    <string name="confirm_send">Confirm &amp; send</string>
+    <string name="biometric_title">Confirm withdrawal</string>
+    <string name="biometric_subtitle">Authenticate to sign the transaction</string>
+    <string name="backup_warning">Write these 12 words down on paper. They are the only backup of your wallet and are shown once.</string>
+    <string name="error_invalid_address">Invalid Bitcoin address</string>
+    <string name="error_insufficient_balance">Insufficient balance</string>
+</resources>
