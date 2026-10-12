@@ -1,57 +1,44 @@
 # ELFALL architecture / Architektura ELFALL
 
-**CZ:** ELFALL = Eleanor + Fallcoin. Jedna 2-v-1 aplikace (jedno APK): neúschovná Bitcoin peněženka + režimy Příjem, Převod, Směna a **Výběr na kartu** (jen CZK/EUR/USD přes licencovaného poskytovatele). Kartové údaje a KYC nikdy nejdou do ELFALL.
+**CZ:** ELFALL = Eleanor + Fallcoin. Jedno 2-v-1 APK: neúschovná Bitcoin peněženka + Stellar režim (podpis v LOBSTR/Freighter) + Převod / Směna + **Výběr na kartu** (primárně Anycoin M.P., záložně MoonPay/Transak/Ramp) jen pro CZK/EUR/USD.
 
-**EN:** ELFALL = Eleanor + Fallcoin. One 2-in-1 APK: a non-custodial Bitcoin wallet plus Receive, Transfer, Swap, and **Withdraw to card** (CZK/EUR/USD only via a licensed provider's hosted widget). Card PAN/CVV and KYC never touch ELFALL.
+**EN:** ELFALL = Eleanor + Fallcoin. One 2-in-1 APK: non-custodial Bitcoin wallet + Stellar mode (signing in LOBSTR/Freighter) + Transfer / Swap + **Withdraw to card** (Anycoin M.P. primary; MoonPay/Transak/Ramp fallback) for CZK/EUR/USD only.
 
 ---
 
-## Product rules / Pravidila produktu
+## Integration research (honest, 2026-10-12)
 
-| Mode (EN) | Mode (CZ) | What it does | Custody |
+| Service | Can do for ELFALL | Cannot / caveats | Docs |
 |---|---|---|---|
-| **Receive** | Příjem | Show BIP84 address / QR | Keys on device |
-| **Transfer** | Převod | Send BTC to a crypto address (on-chain; later cross-network hops) | Signed on device |
-| **Swap** | Směna | Crypto↔crypto via provider widget (Changelly stub / THORChain docs) | Non-custodial; ELFALL never holds funds |
-| **Withdraw to card** | **Výběr na kartu** | Cash-out **only** to payment cards in **CZK, EUR or USD** | Licensed provider does KYC/AML + card processing |
+| **LOBSTR** | WalletConnect 2.0 login + in-app signing; SEP-7 `web+stellar:` deep links; browser signer ext. (`@lobstrco/signer-extension-api`) | ELFALL must not hold Stellar keys; WC session wiring is still a stub beyond SEP-7 URI open | [WC login](https://lobstr.freshdesk.com/support/solutions/articles/151000001589), [signer ext](https://github.com/Lobstrco/lobstr-browser-extension) |
+| **Freighter** | Browser: `@stellar/freighter-api`. Mobile: WalletConnect v2 (`stellar_signXDR`, …) | Extension API is **JS-only** — not callable from Kotlin Android directly; use SEP-7 / WC bridge | [docs.freighter.app](https://docs.freighter.app/) |
+| **Anycoin M.P.** (MP Developers s.r.o., CZ CASP / MiCA) | Hosted web/app for buy/sell CZK/EUR; BankID KYC; app `cz.anycoin.mobile` | **No public partner/sell API found.** Public flow documents fiat out to a **bank account**, Google Pay for *purchases*. Partner contact needed for true in-app quotes / card payout confirmation | [anycoin.cz how-it-works](https://www.anycoin.cz/en/how-it-works) |
+| **Google Wallet** | Passes API (tickets, loyalty). **Google Pay** = checkout to *pay* a merchant | **Not a crypto→card payout destination.** Do not list as cash-out target | [Wallet API](https://developers.google.com/wallet/reference/rest), [Google Pay](https://developers.google.com/pay/api/web/guides/tutorial) |
+| **SEP-0007** | Standard `web+stellar:pay` / `web+stellar:tx` URIs for delegated signing | Wallet must be installed and register the scheme | [SEP-0007](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0007.md) |
 
-**Hard rule:** "Withdrawal" / "Výběr" means **card cash-out only**. Sending BTC to another address is a **Transfer**, not a withdrawal.
-
-**Legal:** ELFALL is non-custodial. MoonPay Sell / Transak / Ramp (stubs) perform KYC/AML and handle card data inside their hosted flows. No cracking vaults, no mining others' devices/sites, no decoding others' crypto products without permission. AI assistant (Track B) may explain balances/fees/addresses only — never sign or hold keys.
-
----
-
-## Track A — on-device wallet (this repo, PR #4)
-
-- KMP `shared/` (`cz.faltyn.elfall.shared`): WalletCore (BIP39/BIP84), AddressValidator, EsploraClient, **TransferService** (BTC send), **offramp.OffRampProvider** (card cash-out stubs), **swap.SwapProvider** (swap stubs).
-- `androidApp/` (`cz.faltyn.elfall`): Compose UI with four modes; Keystore-encrypted mnemonic; biometric gate before Transfer send.
-- `iosApp/`: SwiftUI skeleton.
-- Default network: **testnet**. Mainnet = `bitcoinMainnet` flavor only.
-
-### Off-ramp stubs (no real API keys)
-
-Placeholders in `OffRampConfig`: `moonPayPublishableKey`, `transakApiKey`, `rampApiKey` = `REPLACE_ME` / `pk_test_REPLACE_ME`. Quotes are illustrative; the provider widget is authoritative. Card details never enter our process — we only open an HTTPS hosted URL.
+**Legal:** ELFALL is non-custodial. Licensed providers perform KYC/AML. No cracking vaults, no mining others' devices/sites, no decoding others' crypto products without permission.
 
 ---
 
-## Track B — RunPod serverless (second railway)
+## Product modes
 
-Unchanged intent: Python endpoints for mempool.space proxy, Stellar Horizon read-only, multi-asset prices, optional AI explainer. RunPod balance **$0** today → develop locally first. Never receives seeds.
-
----
-
-## Package / branding
-
-| Item | Value |
-|---|---|
-| Product name | **ELFALL** |
-| Android `applicationId` | `cz.faltyn.elfall` (+ `.testnet` suffix on testnet flavor) |
-| Namespaces | `cz.faltyn.elfall.android`, `cz.faltyn.elfall.shared` |
-| Legacy name | Eleanor / Fallcoin kept in git history and older docs only |
+| Mode (EN) | Mode (CZ) | Implementation |
+|---|---|---|
+| Receive | Příjem | BIP84 BTC address; Stellar receive via watch address + SEP-7 pay request to LOBSTR/Freighter |
+| Transfer | Převod | On-chain BTC send (device sign). Stellar: SEP-7 / WC → LOBSTR or Freighter |
+| Swap | Směna | Provider widget stubs (Changelly / THORChain docs) |
+| Withdraw to card | Výběr na kartu | **Anycoin first**, then MoonPay / Transak / Ramp. Currencies: **CZK, EUR, USD only** |
 
 ---
 
-## Cost / Náklady
+## Code map
 
-- RunPod: $0 until credit is added.
-- Off-ramp / swap provider fees: charged by the provider inside their widget; ELFALL does not add a cash-out fee beyond showing an estimate.
+- `shared/.../offramp/` — `AnycoinProvider` (primary) + MoonPay/Transak/Ramp fallbacks
+- `shared/.../stellar/Sep7.kt` — SEP-7 URI builder + tests
+- `shared/.../stellar/StellarWalletConnector.kt` — `LobstrConnector`, `FreighterConnector`
+- `shared/.../google/GoogleWalletHelper.kt` — capability stub (not a payout rail)
+- Track B (RunPod) — unchanged; $0 credit → local first
+
+### Partner follow-up (Anycoin)
+
+Contact Anycoin business / support for: (1) partner or affiliate deep-link parameters, (2) whether card payout (vs bank account) is available for CZK/EUR/USD, (3) any private API for quotes. Until then ELFALL opens the public site/app only.

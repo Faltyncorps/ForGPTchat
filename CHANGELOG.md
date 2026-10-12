@@ -1,5 +1,16 @@
 # ELFALL – Changelog
 
+## 0.3.1 – Anycoin primary + Stellar SEP-7 (LOBSTR/Freighter) + Google Wallet honesty
+### Added
+- `AnycoinProvider` as primary off-ramp (hosted web/app; no public API — partner contact required).
+- `Sep7` URI builder + `LobstrConnector` / `FreighterConnector` (non-custodial Stellar signing).
+- `GoogleWalletHelper` documenting that Google Wallet/Pay is not a crypto payout destination.
+- Unit tests for SEP-7 pay/tx URIs and Anycoin-as-primary ordering.
+
+### Changed
+- Off-ramp catalogue order: Anycoin → MoonPay → Transak → Ramp.
+- Architecture doc updated with research links (CZ+EN).
+
 ## 0.3.0 – ELFALL product rename + card cash-out (unreleased)
 ### Changed
 - Product branding: **ELFALL** (Eleanor + Fallcoin). Package `cz.faltyn.elfall`.

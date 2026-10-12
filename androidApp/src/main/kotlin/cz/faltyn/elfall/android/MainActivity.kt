@@ -159,6 +159,7 @@ fun ElfallScreen(s: UiState, vm: WalletViewModel, onConfirmTransfer: () -> Unit)
                             Text("${q.amountCrypto} ${q.cryptoAsset} → ${OffRampValidation.formatFiat(q.fiatNetMinor, q.currency)}")
                             Text("Fee / Poplatek: ${OffRampValidation.formatFiat(q.feeMinor, q.currency)}")
                             Text("Rate: 1 BTC ≈ ${q.rate} ${q.currency.code}")
+                            if (q.notes.isNotBlank()) Text(q.notes, style = MaterialTheme.typography.bodySmall)
                             s.cashFlow?.let { flow ->
                                 Button(onClick = { openUrl(flow.url) }) {
                                     Text(stringResource(R.string.open_provider))

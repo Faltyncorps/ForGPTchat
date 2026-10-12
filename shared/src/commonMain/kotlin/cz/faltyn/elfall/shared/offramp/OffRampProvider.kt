@@ -1,13 +1,13 @@
 package cz.faltyn.elfall.shared.offramp
 
 /**
- * Card cash-out ("Výběr na kartu" / Withdraw to card).
+ * Card / fiat cash-out ("Výběr na kartu" / Withdraw to card).
  *
- * Withdrawals from the user's wallet go ONLY to payment cards in CZK, EUR or USD.
- * Card details and KYC never touch ELFALL — they stay inside a licensed provider's
- * hosted widget (MoonPay Sell, Transak Off-Ramp, Ramp Off-Ramp stubs).
+ * Product rule: withdrawals go ONLY via licensed providers for CZK, EUR or USD.
+ * Card PAN/CVV and KYC never touch ELFALL — hosted widgets / partner web flows only.
  *
- * BTC send to another crypto address is a Transfer, not a Withdrawal (see TransferService).
+ * Primary: Anycoin M.P. (CZ CASP, hosted web — no public partner API found; see AnycoinProvider).
+ * Fallbacks: MoonPay Sell, Transak Off-Ramp, Ramp Off-Ramp.
  */
 enum class FiatCurrency(val code: String, val symbol: String, val decimals: Int) {
     CZK("CZK", "Kč", 2),
@@ -18,12 +18,12 @@ enum class FiatCurrency(val code: String, val symbol: String, val decimals: Int)
         fun fromCode(code: String): FiatCurrency? =
             entries.firstOrNull { it.code.equals(code.trim(), ignoreCase = true) }
 
-        /** Only these three currencies are allowed for card cash-out. */
         val supported: List<FiatCurrency> = entries.toList()
     }
 }
 
 enum class OffRampProviderId(val displayName: String) {
+    ANYCOIN("Anycoin M.P."),
     MOONPAY("MoonPay Sell"),
     TRANSAK("Transak Off-Ramp"),
     RAMP("Ramp Network"),
@@ -33,7 +33,6 @@ data class OffRampQuoteRequest(
     val amountCrypto: Double,
     val cryptoAsset: String = "BTC",
     val currency: FiatCurrency,
-    /** Public receive address of the wallet that will fund the sell (never a private key). */
     val walletAddress: String,
 )
 
@@ -42,12 +41,12 @@ data class OffRampQuote(
     val currency: FiatCurrency,
     val amountCrypto: Double,
     val cryptoAsset: String,
-    /** Gross fiat before provider fees, in minor units (haléře / cents). */
     val fiatGrossMinor: Long,
     val feeMinor: Long,
     val fiatNetMinor: Long,
     val rate: Double,
     val expiresAtEpochMs: Long,
+    val notes: String = "",
 ) {
     init {
         require(currency in FiatCurrency.supported) { "Unsupported cash-out currency: ${currency.code}" }
@@ -58,18 +57,17 @@ data class OffRampQuote(
 
 data class HostedFlow(
     val provider: OffRampProviderId,
-    /** HTTPS URL of the provider's hosted KYC + card widget. Open in Custom Tab / browser. */
     val url: String,
+    /** Optional Android package to prefer (e.g. cz.anycoin.mobile). */
+    val androidPackage: String? = null,
 )
 
 interface OffRampProvider {
     val id: OffRampProviderId
     suspend fun quote(request: OffRampQuoteRequest): OffRampQuote
-    /** Builds the hosted-widget URL. Card PAN / CVV / KYC never enter our process. */
     fun buildHostedFlowUrl(request: OffRampQuoteRequest, quote: OffRampQuote): HostedFlow
 }
 
-/** Shared validation used by stubs and unit tests. */
 object OffRampValidation {
     const val MIN_BTC = 0.0001
     const val MAX_BTC = 10.0

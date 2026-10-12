@@ -1,18 +1,25 @@
 package cz.faltyn.elfall.shared.offramp
 
 /**
- * Hosted-widget stubs. No real API keys — read placeholders from [OffRampConfig].
- * Quotes use rough public spot rates for UI preview only; the provider's widget is authoritative.
+ * Provider catalogue. Anycoin is primary (CZ market); MoonPay / Transak / Ramp are fallbacks.
+ * No real API keys — placeholders in [OffRampConfig] only.
+ *
+ * Anycoin honesty note (research 2026-10-12):
+ * - Public site (https://www.anycoin.cz) documents buy/sell for CZK/EUR, BankID KYC, bank-transfer
+ *   fiat withdrawal, and Google Pay / Apple Pay for *purchases* — **no public partner/sell API**.
+ * - Integration today = hosted web / app deep link. Partner API contact required for in-app quotes.
+ * - Public docs emphasize fiat withdrawal to a **bank account**, not a card PAN. Card cash-out may
+ *   still require the user to complete payout inside Anycoin after KYC.
  */
 data class OffRampConfig(
+    val anycoinAffiliateOrPartnerId: String = "REPLACE_ME",
     val moonPayPublishableKey: String = "pk_test_REPLACE_ME",
     val transakApiKey: String = "REPLACE_ME",
     val rampApiKey: String = "REPLACE_ME",
-    /** Rough BTC→fiat mid rates for stub quotes (update via Track B /prices later). */
     val btcCzk: Double = 2_000_000.0,
     val btcEur: Double = 80_000.0,
     val btcUsd: Double = 85_000.0,
-    val feeBps: Int = 150, // 1.5%
+    val feeBps: Int = 150,
 ) {
     fun rate(currency: FiatCurrency): Double = when (currency) {
         FiatCurrency.CZK -> btcCzk
@@ -25,7 +32,6 @@ abstract class HostedOffRampStub(
     override val id: OffRampProviderId,
     protected val config: OffRampConfig,
 ) : OffRampProvider {
-
     override suspend fun quote(request: OffRampQuoteRequest): OffRampQuote {
         OffRampValidation.validateRequest(request)
         val rate = config.rate(request.currency)
@@ -40,15 +46,44 @@ abstract class HostedOffRampStub(
             feeMinor = feeMinor,
             fiatNetMinor = grossMinor - feeMinor,
             rate = rate,
-            expiresAtEpochMs = 0L, // filled by UI clock if needed
+            expiresAtEpochMs = 0L,
         )
+    }
+}
+
+/** Primary CZ provider — hosted flow only until a partner API exists. */
+class AnycoinProvider(config: OffRampConfig = OffRampConfig()) : HostedOffRampStub(OffRampProviderId.ANYCOIN, config) {
+    override suspend fun quote(request: OffRampQuoteRequest): OffRampQuote {
+        val base = super.quote(request)
+        val note = when (request.currency) {
+            FiatCurrency.CZK, FiatCurrency.EUR ->
+                "Hosted Anycoin web/app. Public docs: fiat out to bank account after KYC; no public sell API."
+            FiatCurrency.USD ->
+                "USD may be limited on Anycoin (CZ/EUR focus). Confirm in the Anycoin UI; fallbacks available."
+        }
+        return base.copy(notes = note)
+    }
+
+    override fun buildHostedFlowUrl(request: OffRampQuoteRequest, quote: OffRampQuote): HostedFlow {
+        OffRampValidation.validateRequest(request)
+        // No documented query API — land on sell/home with locale hints. Partner deeplink TBD.
+        val url = buildString {
+            append("https://www.anycoin.cz/?locale=")
+            append(if (request.currency == FiatCurrency.CZK) "cs_CZ" else "en_US")
+            append("&elfall_asset=BTC")
+            append("&elfall_amount=${request.amountCrypto}")
+            append("&elfall_fiat=${request.currency.code}")
+            if (config.anycoinAffiliateOrPartnerId != "REPLACE_ME") {
+                append("&ref=${config.anycoinAffiliateOrPartnerId}")
+            }
+        }
+        return HostedFlow(id, url, androidPackage = "cz.anycoin.mobile")
     }
 }
 
 class MoonPaySellStub(config: OffRampConfig = OffRampConfig()) : HostedOffRampStub(OffRampProviderId.MOONPAY, config) {
     override fun buildHostedFlowUrl(request: OffRampQuoteRequest, quote: OffRampQuote): HostedFlow {
         OffRampValidation.validateRequest(request)
-        // Docs: https://dev.moonpay.com/docs/off-ramp-browse-wallet
         val url = buildString {
             append("https://sell.moonpay.com?")
             append("apiKey=${config.moonPayPublishableKey}")
@@ -64,7 +99,6 @@ class MoonPaySellStub(config: OffRampConfig = OffRampConfig()) : HostedOffRampSt
 class TransakOffRampStub(config: OffRampConfig = OffRampConfig()) : HostedOffRampStub(OffRampProviderId.TRANSAK, config) {
     override fun buildHostedFlowUrl(request: OffRampQuoteRequest, quote: OffRampQuote): HostedFlow {
         OffRampValidation.validateRequest(request)
-        // Docs: https://docs.transak.com/
         val url = buildString {
             append("https://global.transak.com?")
             append("apiKey=${config.transakApiKey}")
@@ -82,12 +116,11 @@ class TransakOffRampStub(config: OffRampConfig = OffRampConfig()) : HostedOffRam
 class RampOffRampStub(config: OffRampConfig = OffRampConfig()) : HostedOffRampStub(OffRampProviderId.RAMP, config) {
     override fun buildHostedFlowUrl(request: OffRampQuoteRequest, quote: OffRampQuote): HostedFlow {
         OffRampValidation.validateRequest(request)
-        // Docs: https://docs.ramp.network/
         val url = buildString {
             append("https://app.ramp.network?")
             append("hostApiKey=${config.rampApiKey}")
             append("&swapAsset=BTC_BTC")
-            append("&swapAmount=${(request.amountCrypto * 100_000_000).toLong()}") // sats
+            append("&swapAmount=${(request.amountCrypto * 100_000_000).toLong()}")
             append("&userAddress=${request.walletAddress}")
             append("&fiatCurrency=${request.currency.code}")
             append("&enabledFlows=OFFRAMP")
@@ -96,8 +129,9 @@ class RampOffRampStub(config: OffRampConfig = OffRampConfig()) : HostedOffRampSt
     }
 }
 
-/** Default catalogue of stubbed licensed providers. */
+/** Anycoin first, then international fallbacks. */
 fun defaultOffRampProviders(config: OffRampConfig = OffRampConfig()): List<OffRampProvider> = listOf(
+    AnycoinProvider(config),
     MoonPaySellStub(config),
     TransakOffRampStub(config),
     RampOffRampStub(config),
