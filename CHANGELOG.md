@@ -1,12 +1,18 @@
 # ELFALL – Changelog
 
+## 0.4.1 – Provider & FLC policy update (2026-10-13)
+- Off-ramp: only **MoonPay** and **Coinbase** active (Coinbase stub added). Ramp, Banxa, Transak, Mercuryo removed (see `docs/offramp-providers.md`); Anycoin no longer in active list.
+- **yFLC frozen** (zmrazeno): flagged in assets, not issued by `scripts/issue_flc_testnet.py`, no price in RunPod worker.
+- FLC display price changed to **0.33 USD** (display-only, not a peg).
+- `docs/mica-checklist.md`: scenario B findings (Art. 4(2) exemption, cap ≈ 3.39M FLC, recommended ~3.0M), ESMA register status.
+
 ## 0.4.0 – RunPod testnet network + FLC/yFLC
 ### Added
 - `runpod/` serverless worker (BTC mempool testnet, Stellar Horizon testnet, Sepolia, Solana devnet, Polygon Amoy) + pytest.
 - `scripts/issue_flc_testnet.py` — issue FLC/yFLC on Stellar testnet via Friendbot (secrets gitignored).
 - `docs/elfall-network.md` (CZ-first): architecture, mainnet checklist, cost note ($0 → no deploy).
 - Kotlin `DevAssets` (tBTC, XLM, sepETH, SOL, MATIC, FLC, yFLC) + `ElfallNetwork` selector (mainnet locked).
-- Display-only FLC reference 9.33 USD with explicit non-peg disclaimer.
+- Display-only FLC reference 0.33 USD with explicit non-peg disclaimer.
 
 ## 0.3.1 – Anycoin primary + Stellar SEP-7 (LOBSTR/Freighter) + Google Wallet honesty
 ### Added

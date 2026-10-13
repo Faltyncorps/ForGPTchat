@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Issue FALLCOIN (FLC) and yFALLCOIN (yFLC) as Stellar TESTNET assets.
+Issue FALLCOIN (FLC) as a Stellar TESTNET asset.
+yFALLCOIN (yFLC) is FROZEN (owner decision 2026-10-13) and is never issued or distributed.
 
 - Uses Friendbot to fund issuer + distribution accounts.
 - Secrets written ONLY to scripts/.env and scripts/flc_keys.json (gitignored).
@@ -55,9 +56,10 @@ def load_or_create_keys() -> dict:
         "issuer_secret": issuer.secret,
         "distribution_public": dist.public_key,
         "distribution_secret": dist.secret,
-        "assets": ["FLC", "yFLC"],
-        "reference_usd_display_only": 9.33,
-        "disclaimer": "TESTNET only. 9.33 USD is NOT a real peg.",
+        "assets": ["FLC"],
+        "frozen_assets": ["yFLC"],
+        "reference_usd_display_only": 0.33,
+        "disclaimer": "TESTNET only. 0.33 USD is NOT a real peg.",
     }
     KEYS_PATH.write_text(json.dumps(data, indent=2) + "\n")
     os.chmod(KEYS_PATH, 0o600)
@@ -68,7 +70,7 @@ def load_or_create_keys() -> dict:
                 f"FLC_DISTRIBUTION_PUBLIC={data['distribution_public']}",
                 f"FALLCOIN_ISSUER_SECRET={data['issuer_secret']}",
                 f"FALLCOIN_DISTRIBUTION_SECRET={data['distribution_secret']}",
-                "FLC_REFERENCE_USD=9.33",
+                "FLC_REFERENCE_USD=0.33",
                 "NETWORK=testnet",
                 "",
             ]
@@ -103,6 +105,10 @@ def change_trust_and_pay(server: Server, issuer_kp: Keypair, dist_kp: Keypair, c
     return resp["hash"]
 
 
+FROZEN_ASSETS = frozenset({"yFLC"})
+ISSUE_ASSETS = (("FLC", "1000000"),)
+
+
 def main() -> None:
     data = load_or_create_keys()
     issuer_pub = data["issuer_public"]
@@ -123,7 +129,10 @@ def main() -> None:
     issuer_kp = Keypair.from_secret(data["issuer_secret"])
     dist_kp = Keypair.from_secret(data["distribution_secret"])
 
-    for code, amount in (("FLC", "1000000"), ("yFLC", "1000000")):
+    for code, amount in ISSUE_ASSETS:
+        if code in FROZEN_ASSETS:
+            print(f"{code}: frozen, skipping.")
+            continue
         try:
             txh = change_trust_and_pay(server, issuer_kp, dist_kp, code, amount)
             print(f"{code} issued → distribution. tx: {EXPERT}/tx/{txh}")
@@ -131,7 +140,7 @@ def main() -> None:
         except Exception as e:
             print(f"{code}: {e}", file=sys.stderr)
 
-    print("\nDisclaimer: 1.00 FLC = 9.33 USD is a TESTNET display constant only — NOT a real peg.")
+    print("\nDisclaimer: 1.00 FLC = 0.33 USD is a TESTNET display constant only — NOT a real peg.")
     print(f"Secrets saved under {KEYS_PATH} and {ENV_PATH} (gitignored). Do not commit.")
 
 

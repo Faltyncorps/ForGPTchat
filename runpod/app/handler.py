@@ -55,7 +55,10 @@ async def dispatch(event: dict) -> dict:
         assets = []
         for a in config.DEV_TESTNET_ASSETS:
             item = dict(a)
-            if item["id"] in ("FLC", "yFLC"):
+            if item["id"] in config.FROZEN_ASSETS:
+                item["frozen"] = True
+                item["label_cs"] = "zmrazeno"
+            elif item["id"] == "FLC":
                 item["issuer"] = config.FLC_ISSUER_PUBLIC or None
                 item["distribution"] = config.FLC_DISTRIBUTION_PUBLIC or None
             assets.append(item)
@@ -90,7 +93,8 @@ async def dispatch(event: dict) -> dict:
             {
                 "pair": "FLC/USD",
                 "price": config.FLC_REFERENCE_USD,
-                "yflc_price": config.FLC_REFERENCE_USD,
+                "yflc_price": None,
+                "yflc_frozen": True,
                 "disclaimer": config.FLC_REFERENCE_DISCLAIMER,
                 "testnet_only": True,
             }

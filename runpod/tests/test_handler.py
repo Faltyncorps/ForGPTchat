@@ -12,11 +12,14 @@ async def test_health_and_assets():
     assert h["ok"] is True
     assert h["network_mode"] == "testnet"
     assert "tBTC" in h["data"]["assets"]
-    assert h["data"]["flc_reference_usd"] == 9.33
+    assert h["data"]["flc_reference_usd"] == 0.33
 
     a = await dispatch({"input": {"route": "assets"}})
     ids = [x["id"] for x in a["data"]["assets"]]
     assert ids == ["tBTC", "XLM", "sepETH", "devSOL", "amoyMATIC", "FLC", "yFLC"]
+    y = next(x for x in a["data"]["assets"] if x["id"] == "yFLC")
+    assert y["frozen"] is True and y["label_cs"] == "zmrazeno"
+    assert "issuer" not in y
 
 
 @pytest.mark.asyncio
@@ -44,8 +47,9 @@ async def test_stellar_account_404():
 @pytest.mark.asyncio
 async def test_flc_price_disclaimer():
     out = await dispatch({"input": {"route": "flc/price"}})
-    assert out["data"]["price"] == 9.33
+    assert out["data"]["price"] == 0.33
     assert out["data"]["testnet_only"] is True
+    assert out["data"]["yflc_price"] is None and out["data"]["yflc_frozen"] is True
     assert "NOT a real peg" in out["data"]["disclaimer"]
 
 

@@ -9,7 +9,9 @@ def test_five_plus_coins_and_flc():
     assert len(chains) >= 5
     codes = {t["code"] for t in CFG["tokens"]}
     assert {"FLC", "yFLC"} <= codes
-    assert all(t["display_price_usd"] == 9.33 and t["display_only"] for t in CFG["tokens"])
+    toks = {t["id"]: t for t in CFG["tokens"]}
+    assert toks["FLC"]["display_price_usd"] == 0.33 and toks["FLC"]["display_only"]
+    assert toks["yFLC"]["frozen"] is True and toks["yFLC"]["display_price_usd"] is None
 
 
 def test_testnet_only_https_no_secrets():

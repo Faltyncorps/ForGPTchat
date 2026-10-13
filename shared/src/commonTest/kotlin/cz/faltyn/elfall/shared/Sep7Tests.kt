@@ -61,10 +61,9 @@ class Sep7Tests {
         assertEquals("com.lobstr.client", lobstr.androidPackage)
     }
 
-    @Test fun anycoinIsPrimaryProvider() {
+    @Test fun activeProvidersAreMoonPayAndCoinbase() {
         val ids = defaultOffRampProviders().map { it.id.name }
-        assertEquals("ANYCOIN", ids.first())
-        assertTrue(ids.containsAll(listOf("MOONPAY", "TRANSAK", "RAMP")))
+        assertEquals(listOf("MOONPAY", "COINBASE"), ids)
     }
 
     @Test fun anycoinHostedFlow() {

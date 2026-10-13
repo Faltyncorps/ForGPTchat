@@ -13,7 +13,7 @@
 | **Receive / Příjem** | BIP84 address |
 | **Transfer / Převod** | Send BTC to a crypto address (on-device sign + biometric confirm) |
 | **Swap / Směna** | Crypto↔crypto via provider widget stub (non-custodial) |
-| **Withdraw to card / Výběr na kartu** | Cash-out **only** to payment cards in CZK, EUR or USD (MoonPay / Transak / Ramp hosted stubs). Card + KYC stay with the provider. |
+| **Withdraw to card / Výběr na kartu** | Cash-out **only** to payment cards in CZK, EUR or USD (MoonPay / Coinbase hosted stubs). Card + KYC stay with the provider. |
 
 ## Stack
 

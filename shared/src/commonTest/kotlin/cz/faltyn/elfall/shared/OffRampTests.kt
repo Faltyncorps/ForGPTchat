@@ -5,7 +5,9 @@ import cz.faltyn.elfall.shared.offramp.MoonPaySellStub
 import cz.faltyn.elfall.shared.offramp.OffRampConfig
 import cz.faltyn.elfall.shared.offramp.OffRampQuoteRequest
 import cz.faltyn.elfall.shared.offramp.OffRampValidation
-import cz.faltyn.elfall.shared.offramp.TransakOffRampStub
+import cz.faltyn.elfall.shared.offramp.CoinbaseOffRampStub
+import cz.faltyn.elfall.shared.offramp.OffRampProviderId
+import cz.faltyn.elfall.shared.offramp.defaultOffRampProviders
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -49,16 +51,21 @@ class OffRampTests {
         }
     }
 
-    @Test fun transakStubUsesSellProduct() {
+    @Test fun coinbaseStubUsesCardCashout() {
         runBlocking {
-            val stub = TransakOffRampStub()
+            val stub = CoinbaseOffRampStub()
             val req = OffRampQuoteRequest(0.05, "BTC", FiatCurrency.EUR, "tb1qdest")
             val q = stub.quote(req)
             assertEquals(FiatCurrency.EUR, q.currency)
             val flow = stub.buildHostedFlowUrl(req, q)
-            assertTrue(flow.url.contains("productsAvailed=SELL"))
+            assertTrue(flow.url.startsWith("https://pay.coinbase.com/"))
             assertTrue(flow.url.contains("fiatCurrency=EUR"))
             assertNotNull(OffRampValidation.formatFiat(q.fiatNetMinor, FiatCurrency.EUR))
         }
+    }
+
+    @Test fun onlyMoonPayAndCoinbaseActive() {
+        assertEquals(listOf("MOONPAY", "COINBASE"), defaultOffRampProviders().map { it.id.name })
+        assertEquals(listOf("ANYCOIN", "MOONPAY", "COINBASE"), OffRampProviderId.entries.map { it.name })
     }
 }

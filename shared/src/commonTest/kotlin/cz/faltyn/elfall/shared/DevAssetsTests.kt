@@ -11,7 +11,14 @@ class DevAssetsTests {
     @Test fun fiveChainsPlusFlc() {
         val ids = DevAssets.catalogue.map { it.id }
         assertTrue(ids.containsAll(listOf("tBTC", "XLM", "sepETH", "devSOL", "amoyMATIC", "FLC", "yFLC")))
-        assertEquals(9.33, FLC_REFERENCE_USD)
+        assertEquals(0.33, FLC_REFERENCE_USD)
+    }
+
+    @Test fun yflcIsFrozen() {
+        val y = DevAssets.catalogue.first { it.id == "yFLC" }
+        assertTrue(y.frozen)
+        assertTrue(DevAssets.activeCatalogue.none { it.id == "yFLC" })
+        assertTrue(!DevAssets.catalogue.first { it.id == "FLC" }.frozen)
     }
 
     @Test fun defaultNetworkIsTestnet() {

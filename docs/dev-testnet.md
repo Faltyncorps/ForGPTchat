@@ -13,9 +13,9 @@ the app-side catalogue mirrors it in `shared/.../assets/DevAssets.kt`.
 | XLM | Stellar testnet | Horizon testnet | Friendbot |
 | devSOL | Solana devnet | api.devnet.solana.com | faucet.solana.com |
 | (amoyMATIC) | Polygon Amoy | already in app catalogue, optional | – |
-| **FLC / yFLC** | Stellar testnet `credit_alphanum4`, issuer `GCUMZ6…RPKT` | Horizon | issued by `scripts/issue_flc_testnet.py` |
+| **FLC / yFLC** | Stellar testnet `credit_alphanum4`, issuer `GCUMZ6…RPKT` | Horizon | FLC issued by `scripts/issue_flc_testnet.py`; **yFLC frozen (zmrazeno) – not issued** |
 
-**Display price: 1 FLC = 9.33 USD** — a testnet display constant (`FLC_REFERENCE_USD`), **not a peg**, no redemption
+**Display price: 1 FLC = 0.33 USD** — a testnet display constant (`FLC_REFERENCE_USD`), **not a peg**, no redemption
 claim, no reserve. Any "target price" language on mainnet would trigger MiCA ART/EMT analysis (see `docs/mica-checklist.md`).
 
 ## Architecture

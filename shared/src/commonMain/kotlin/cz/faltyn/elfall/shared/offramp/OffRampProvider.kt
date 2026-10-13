@@ -6,8 +6,9 @@ package cz.faltyn.elfall.shared.offramp
  * Product rule: withdrawals go ONLY via licensed providers for CZK, EUR or USD.
  * Card PAN/CVV and KYC never touch ELFALL — hosted widgets / partner web flows only.
  *
- * Primary: Anycoin M.P. (CZ CASP, hosted web — no public partner API found; see AnycoinProvider).
- * Fallbacks: MoonPay Sell, Transak Off-Ramp, Ramp Off-Ramp.
+ * Active providers (owner decision 2026-10-13): MoonPay Sell and Coinbase Offramp only.
+ * Ramp, Banxa, Transak and Mercuryo were evaluated and excluded (see docs/offramp-providers.md).
+ * AnycoinProvider is kept as code but is NOT in the active list.
  */
 enum class FiatCurrency(val code: String, val symbol: String, val decimals: Int) {
     CZK("CZK", "Kč", 2),
@@ -25,8 +26,7 @@ enum class FiatCurrency(val code: String, val symbol: String, val decimals: Int)
 enum class OffRampProviderId(val displayName: String) {
     ANYCOIN("Anycoin M.P."),
     MOONPAY("MoonPay Sell"),
-    TRANSAK("Transak Off-Ramp"),
-    RAMP("Ramp Network"),
+    COINBASE("Coinbase Offramp"),
 }
 
 data class OffRampQuoteRequest(

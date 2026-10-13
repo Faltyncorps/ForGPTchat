@@ -1,8 +1,8 @@
 # ELFALL architecture / Architektura ELFALL
 
-**CZ:** ELFALL = Eleanor + Fallcoin. Jedno 2-v-1 APK: neúschovná Bitcoin peněženka + Stellar režim (podpis v LOBSTR/Freighter) + Převod / Směna + **Výběr na kartu** (primárně Anycoin M.P., záložně MoonPay/Transak/Ramp) jen pro CZK/EUR/USD.
+**CZ:** ELFALL = Eleanor + Fallcoin. Jedno 2-v-1 APK: neúschovná Bitcoin peněženka + Stellar režim (podpis v LOBSTR/Freighter) + Převod / Směna + **Výběr na kartu** (MoonPay / Coinbase) jen pro CZK/EUR/USD.
 
-**EN:** ELFALL = Eleanor + Fallcoin. One 2-in-1 APK: non-custodial Bitcoin wallet + Stellar mode (signing in LOBSTR/Freighter) + Transfer / Swap + **Withdraw to card** (Anycoin M.P. primary; MoonPay/Transak/Ramp fallback) for CZK/EUR/USD only.
+**EN:** ELFALL = Eleanor + Fallcoin. One 2-in-1 APK: non-custodial Bitcoin wallet + Stellar mode (signing in LOBSTR/Freighter) + Transfer / Swap + **Withdraw to card** (MoonPay / Coinbase) for CZK/EUR/USD only.
 
 ---
 
@@ -27,13 +27,13 @@
 | Receive | Příjem | BIP84 BTC address; Stellar receive via watch address + SEP-7 pay request to LOBSTR/Freighter |
 | Transfer | Převod | On-chain BTC send (device sign). Stellar: SEP-7 / WC → LOBSTR or Freighter |
 | Swap | Směna | Provider widget stubs (Changelly / THORChain docs) |
-| Withdraw to card | Výběr na kartu | **Anycoin first**, then MoonPay / Transak / Ramp. Currencies: **CZK, EUR, USD only** |
+| Withdraw to card | Výběr na kartu | **MoonPay, Coinbase** (only active providers; Anycoin not active). Currencies: **CZK, EUR, USD only** |
 
 ---
 
 ## Code map
 
-- `shared/.../offramp/` — `AnycoinProvider` (primary) + MoonPay/Transak/Ramp fallbacks
+- `shared/.../offramp/` — `MoonPaySellStub` + `CoinbaseOffRampStub` active (`AnycoinProvider` kept, inactive)
 - `shared/.../stellar/Sep7.kt` — SEP-7 URI builder + tests
 - `shared/.../stellar/StellarWalletConnector.kt` — `LobstrConnector`, `FreighterConnector`
 - `shared/.../google/GoogleWalletHelper.kt` — capability stub (not a payout rail)

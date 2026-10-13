@@ -43,17 +43,17 @@ Kód: `runpod/app/handler.py`, `Dockerfile`, `requirements.txt`, testy `runpod/t
 | devSOL | Solana Devnet | veřejný RPC |
 | amoyMATIC | Polygon Amoy | veřejný RPC |
 | **FLC** | Stellar testnet asset | FALLCOIN — `scripts/issue_flc_testnet.py` |
-| **yFLC** | Stellar testnet asset | výnosový wrapper (koncept, jen testnet) |
+| **yFLC** | Stellar testnet asset | **zmrazeno** – nevydává se ani nedistribuuje |
 
 ### Referenční cena (jen zobrazení)
 
-**1.00 FLC = 9.33 USD** (stejně pro yFLC) je konstanta v konfiguraci (`FLC_REFERENCE_USD`).
+**1.00 FLC = 0.33 USD** (yFLC je zmrazeno – bez ceny) je konstanta v konfiguraci (`FLC_REFERENCE_USD`).
 
 > ⚠️ **Není to reálný peg.** Není to e-money, není to pohledávka na USD rezervy, není auditováno. Pouze pro UI na testnetu.
 
 ### yFLC (koncept)
 
-Na testnetu je yFLC samostatné Stellar aktivum (`yFLC` od stejného issueru). „Yield-bearing wrapper“ = budoucí logika (rebase / claim) — **zatím jen dokumentace + emission skript**, žádný hlavní síťový produkt.
+Na testnetu je yFLC samostatné Stellar aktivum (`yFLC` od stejného issueru). „Yield-bearing wrapper“ = budoucí logika (rebase / claim) — **zmrazeno (rozhodnutí vlastníka 13. 10. 2026) – skript yFLC nevydává**, žádný hlavní síťový produkt.
 
 ---
 
@@ -106,4 +106,4 @@ Vygenerováno `scripts/issue_flc_testnet.py` (2026-10-12). Tajné klíče **nejs
 | yFLC | [stellar.expert](https://stellar.expert/explorer/testnet/asset/yFLC-GCUMZ6Z7GAYFL2MGSFRG7HXDPL4FRBPZYAYJGTWEEKDI3NJIFUMSRPKT) |
 | Issuer účet | [explorer](https://stellar.expert/explorer/testnet/account/GCUMZ6Z7GAYFL2MGSFRG7HXDPL4FRBPZYAYJGTWEEKDI3NJIFUMSRPKT) |
 
-Referenční cena zobrazení: **1 FLC = 9,33 USD** (není peg).
+Referenční cena zobrazení: **1 FLC = 0,33 USD** (není peg).

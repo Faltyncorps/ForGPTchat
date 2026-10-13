@@ -1,7 +1,8 @@
 package cz.faltyn.elfall.shared.offramp
 
 /**
- * Provider catalogue. Anycoin is primary (CZ market); MoonPay / Transak / Ramp are fallbacks.
+ * Provider catalogue. Active: MoonPay and Coinbase only (owner decision 2026-10-13).
+ * Anycoin stays as code but is not active. Ramp/Banxa/Transak/Mercuryo are excluded.
  * No real API keys — placeholders in [OffRampConfig] only.
  *
  * Anycoin honesty note (research 2026-10-12):
@@ -14,8 +15,7 @@ package cz.faltyn.elfall.shared.offramp
 data class OffRampConfig(
     val anycoinAffiliateOrPartnerId: String = "REPLACE_ME",
     val moonPayPublishableKey: String = "pk_test_REPLACE_ME",
-    val transakApiKey: String = "REPLACE_ME",
-    val rampApiKey: String = "REPLACE_ME",
+    val coinbaseAppId: String = "REPLACE_ME",
     val btcCzk: Double = 2_000_000.0,
     val btcEur: Double = 80_000.0,
     val btcUsd: Double = 85_000.0,
@@ -96,43 +96,25 @@ class MoonPaySellStub(config: OffRampConfig = OffRampConfig()) : HostedOffRampSt
     }
 }
 
-class TransakOffRampStub(config: OffRampConfig = OffRampConfig()) : HostedOffRampStub(OffRampProviderId.TRANSAK, config) {
+/** Coinbase Onramp/Offramp (CDP) one-click sell URL. Needs user Coinbase account + KYC. */
+class CoinbaseOffRampStub(config: OffRampConfig = OffRampConfig()) : HostedOffRampStub(OffRampProviderId.COINBASE, config) {
     override fun buildHostedFlowUrl(request: OffRampQuoteRequest, quote: OffRampQuote): HostedFlow {
         OffRampValidation.validateRequest(request)
         val url = buildString {
-            append("https://global.transak.com?")
-            append("apiKey=${config.transakApiKey}")
-            append("&productsAvailed=SELL")
-            append("&cryptoCurrencyCode=BTC")
-            append("&network=bitcoin")
-            append("&walletAddress=${request.walletAddress}")
+            append("https://pay.coinbase.com/v3/sell/input?")
+            append("appId=${config.coinbaseAppId}")
+            append("&defaultAsset=BTC")
+            append("&defaultNetwork=bitcoin")
+            append("&presetCryptoAmount=${request.amountCrypto}")
             append("&fiatCurrency=${request.currency.code}")
-            append("&cryptoAmount=${request.amountCrypto}")
+            append("&defaultCashoutMethod=CARD")
         }
         return HostedFlow(id, url)
     }
 }
 
-class RampOffRampStub(config: OffRampConfig = OffRampConfig()) : HostedOffRampStub(OffRampProviderId.RAMP, config) {
-    override fun buildHostedFlowUrl(request: OffRampQuoteRequest, quote: OffRampQuote): HostedFlow {
-        OffRampValidation.validateRequest(request)
-        val url = buildString {
-            append("https://app.ramp.network?")
-            append("hostApiKey=${config.rampApiKey}")
-            append("&swapAsset=BTC_BTC")
-            append("&swapAmount=${(request.amountCrypto * 100_000_000).toLong()}")
-            append("&userAddress=${request.walletAddress}")
-            append("&fiatCurrency=${request.currency.code}")
-            append("&enabledFlows=OFFRAMP")
-        }
-        return HostedFlow(id, url)
-    }
-}
-
-/** Anycoin first, then international fallbacks. */
+/** Active off-ramp providers: MoonPay, Coinbase. */
 fun defaultOffRampProviders(config: OffRampConfig = OffRampConfig()): List<OffRampProvider> = listOf(
-    AnycoinProvider(config),
     MoonPaySellStub(config),
-    TransakOffRampStub(config),
-    RampOffRampStub(config),
+    CoinbaseOffRampStub(config),
 )

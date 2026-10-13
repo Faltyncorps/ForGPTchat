@@ -24,10 +24,10 @@
   "tokens": [
     {"id": "FLC", "code": "FLC", "chain": "stellar-testnet", "type": "credit_alphanum4",
      "issuer": "GCUMZ6Z7GAYFL2MGSFRG7HXDPL4FRBPZYAYJGTWEEKDI3NJIFUMSRPKT",
-     "display_price_usd": 9.33, "display_only": true},
+     "display_price_usd": 0.33, "display_only": true},
     {"id": "yFLC", "code": "yFLC", "chain": "stellar-testnet", "type": "credit_alphanum4",
      "issuer": "GCUMZ6Z7GAYFL2MGSFRG7HXDPL4FRBPZYAYJGTWEEKDI3NJIFUMSRPKT",
-     "display_price_usd": 9.33, "display_only": true}
+     "display_price_usd": null, "display_only": true, "frozen": true}
   ],
   "limits": {"max_requests_per_minute_per_ip": 60, "mainnet_signing": false}
 }

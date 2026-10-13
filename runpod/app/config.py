@@ -14,9 +14,9 @@ class NetworkMode(str, Enum):
 NETWORK: Final[NetworkMode] = NetworkMode(os.getenv("NETWORK", "testnet").lower())
 
 # Display-only reference for testnet UI. NOT a peg, NOT redeemable, NOT audited.
-FLC_REFERENCE_USD: Final[float] = float(os.getenv("FLC_REFERENCE_USD", "9.33"))
+FLC_REFERENCE_USD: Final[float] = float(os.getenv("FLC_REFERENCE_USD", "0.33"))
 FLC_REFERENCE_DISCLAIMER: Final[str] = (
-    "FLC/yFLC reference 1.00 FLC = 9.33 USD is a TESTNET display constant only. "
+    "FLC/yFLC reference 1.00 FLC = 0.33 USD is a TESTNET display constant only. "
     "It is NOT a real peg, e-money, or claim on USD reserves."
 )
 
@@ -52,6 +52,9 @@ FLC_ISSUER_PUBLIC = os.getenv("FLC_ISSUER_PUBLIC", "")
 FLC_DISTRIBUTION_PUBLIC = os.getenv("FLC_DISTRIBUTION_PUBLIC", "")
 YFLC_ISSUER_PUBLIC = os.getenv("YFLC_ISSUER_PUBLIC", "")  # often same issuer on testnet
 
+# yFLC is frozen by owner decision (2026-10-13): never issued, distributed or priced.
+FROZEN_ASSETS: Final[frozenset[str]] = frozenset({"yFLC"})
+
 DEV_TESTNET_ASSETS: Final[list[dict]] = [
     {"id": "tBTC", "symbol": "tBTC", "network": "bitcoin-testnet", "kind": "native"},
     {"id": "XLM", "symbol": "XLM", "network": "stellar-testnet", "kind": "native"},
@@ -74,7 +77,8 @@ DEV_TESTNET_ASSETS: Final[list[dict]] = [
         "kind": "credit_alphanum4",
         "code": "yFLC",
         "reference_usd": FLC_REFERENCE_USD,
-        "disclaimer": FLC_REFERENCE_DISCLAIMER + " yFLC is a testnet yield-wrapper concept only.",
+        "disclaimer": FLC_REFERENCE_DISCLAIMER + " yFLC is FROZEN (zmrazeno): not issued or distributed.",
+        "frozen": True,
     },
 ]
 

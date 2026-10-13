@@ -6,7 +6,7 @@
 - [ ] **Eleanor = non-custodial wallet.** Recital 83: hardware/software providers of non-custodial wallets are out of
       MiCA scope, *as long as* ELFALL never holds or controls users' keys/assets. Keep: seed only on device, no server
       signing, no recovery service, no pooled addresses.
-- [ ] **Card cash-out / swaps** must be performed by a **licensed CASP** (MoonPay, Ramp…), user contracts with them.
+- [ ] **Card cash-out / swaps** must be performed by a **licensed CASP** (active: MoonPay, Coinbase), user contracts with them.
       ELFALL must not receive crypto or fiat on users' behalf → otherwise it becomes exchange/transfer/custody CASP
       (Art. 3(1)(16) services a, c, d, j).
 - [ ] If ELFALL ever receives/transmits orders, gives crypto advice, or holds keys → **CASP authorisation (Art. 59–63)**
@@ -15,16 +15,41 @@
 
 ## 2. FLC / yFLC classification
 - [ ] Testnet only today → not offered to the public, no MiCA obligations yet. Keep "no value, testnet" labelling.
-- [ ] **Danger: "1 FLC = 9.33 USD".** If presented as a *stable/target value* referencing USD, FLC can qualify as an
+- [ ] **Danger: "1 FLC = 0.33 USD".** If presented as a *stable/target value* referencing USD, FLC can qualify as an
       **EMT** (refers to one official currency, Art. 3(1)(7)) – EMT issuance only by a **credit institution or e-money
       institution** + white paper (Art. 48–51). A basket/other reference → **ART** (Art. 3(1)(6)), authorisation under
-      Title III (Art. 16+), own funds, reserve of assets, redemption rights. ⇒ Keep 9.33 USD strictly a *display
+      Title III (Art. 16+), own funds, reserve of assets, redemption rights. ⇒ Keep 0.33 USD strictly a *display
       constant*, never "peg/stable/redeemable", no reserve claims.
 - [ ] If FLC is a plain "other crypto-asset" (no stabilisation, no reference) offered to the public in the EU or admitted
       to trading → **Title II crypto-asset white paper** (Art. 4–6), notified to ČNB (Art. 8), marketing communications
       rules (Art. 7), liability for the white paper (Art. 15), 12-month retail withdrawal right (Art. 13).
+- [x] **yFLC is FROZEN (zmrazeno)** by owner decision 2026-10-13: not issued, not distributed, not priced.
 - [ ] yFLC ("yield") – any promised yield/interest: EMT/ART must not grant interest (Art. 40, 50); yield products may
       also be MiFID II financial instruments → out of MiCA, into securities law. Get legal opinion before mainnet.
+
+## 2a. Scenario B findings (small FLC offer under Art. 4(2) exemption) — 2026-10-13
+- [ ] **Art. 4(2) exemption** from the white-paper obligation applies only if the offer is: (a) to **fewer than 150
+      natural or legal persons per member state** (acting for their own account), or (b) total consideration **below
+      EUR 1,000,000 over 12 months**, or (c) addressed **solely to qualified investors**.
+- [ ] The offeror must still be a **legal person** (Art. 4(1)(a)) – an individual cannot offer FLC to the public.
+- [ ] **Art. 7 marketing rules** still apply: communications clearly identifiable, fair, clear, not misleading,
+      consistent with any white paper; no peg/yield/guarantee claims.
+- [ ] **Art. 4(4)**: the exemptions do **not** apply if the offeror communicates an intention to seek **admission to
+      trading** (EU listing) – any listing plan removes the exemption and requires a full white paper.
+- [ ] **Cap calculation:** EUR 1,000,000 × ECB rate 1.1188 USD/EUR (13 Oct 2026) = USD 1,118,800; at display price
+      0.33 USD/FLC ⇒ **≈ 3.39M FLC** maximum per 12 months. **Recommended cap ~3.0M FLC** (buffer for FX moves).
+- [ ] **Cost estimates (estimates only, not quotes):** exempt route (legal person, legal opinion, marketing review)
+      **~70–200k CZK**; full Title II white paper route **~250–600k CZK**.
+- [ ] **ESMA MiCA register status (checked 13 Oct 2026):**
+
+| Provider | Entity | NCA | Authorised | ELFALL status |
+|---|---|---|---|---|
+| MoonPay | MoonPay Europe B.V. | AFM (NL) | 30/12/2024 | Active |
+| Coinbase | Coinbase Luxembourg S.A. | CSSF (LU) | 20/06/2025 | Active |
+| Ramp | Ramp Ireland | CBI (IE) | 02/12/2025 | Excluded (owner decision) |
+| Banxa | EU Internet Ventures B.V. | AFM (NL) | 08/10/2025 | Excluded (owner decision) |
+| Transak | – | – | not listed | Excluded |
+| Mercuryo | – | – | not listed | Excluded |
 
 ## 3. AML / Travel Rule
 - [ ] **Regulation (EU) 2023/1113 (TFR)** applies from 30 Dec 2024 to CASPs: originator/beneficiary info on every

@@ -15,7 +15,7 @@ package cz.faltyn.elfall.shared.google
  * Google Pay is the payment method for the *buy* side, not a payout rail.
  *
  * ## Implication for ELFALL "Výběr na kartu"
- * Cash-out destinations remain licensed off-ramp providers (Anycoin / MoonPay / Transak / Ramp).
+ * Cash-out destinations remain licensed off-ramp providers (MoonPay / Coinbase).
  * Google Wallet/Pay may later help the user *select* a payment method for **buying** crypto,
  * or display an ELFALL loyalty/receipt pass — never as the crypto payout destination itself.
  *
@@ -43,8 +43,8 @@ object GoogleWalletHelper {
 
     fun cashOutGuidance() = Guidance(
         role = Role.NOT_A_PAYOUT_DESTINATION,
-        summaryEn = "Google Wallet does not receive card payouts from crypto sells. Use Anycoin/MoonPay/Transak/Ramp.",
-        summaryCs = "Google Wallet nepřijímá výplaty z prodeje krypta na kartu. Použijte Anycoin/MoonPay/Transak/Ramp.",
+        summaryEn = "Google Wallet does not receive card payouts from crypto sells. Use MoonPay/Coinbase.",
+        summaryCs = "Google Wallet nepřijímá výplaty z prodeje krypta na kartu. Použijte MoonPay/Coinbase.",
         docsUrl = WALLET_PASSES_DOCS,
     )
 

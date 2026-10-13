@@ -8,8 +8,8 @@ zákon č. 31/2025 Sb., AML zákon č. 253/2008 Sb., nařízení (EU) 2023/1113,
    k nim nemá přístup, nemůže je obnovit ani za uživatele podepsat transakci.
 3. **Nikdy nesdílejte seed ani klíče.** Provozovatel, aplikace, AI asistent ani podpora o ně **nikdy** nežádají. Kdo o ně
    žádá, je podvodník. Totéž platí pro hesla, PIN, kódy SMS/OTP a údaje platebních karet.
-4. **Testovací režim:** Aktuální verze pracuje jen s **testnetem**. Testnet mince ani tokeny FLC/yFLC nemají žádnou hodnotu.
-   Údaj „1 FLC = 9,33 USD“ je pouze zobrazovací konstanta – **není to peg, stabilní hodnota, nárok na výplatu ani investice**.
+4. **Testovací režim:** Aktuální verze pracuje jen s **testnetem**. Testnet mince ani tokeny FLC/yFLC nemají žádnou hodnotu. Token yFLC je **zmrazen** – nevydává se ani nedistribuuje.
+   Údaj „1 FLC = 0,33 USD“ je pouze zobrazovací konstanta – **není to peg, stabilní hodnota, nárok na výplatu ani investice**.
 5. **Výběry na kartu / směny:** zajišťují výhradně **licencovaní poskytovatelé** (poskytovatelé služeb kryptoaktiv dle MiCA)
    v jejich vlastním rozhraní, včetně KYC/AML a Travel Rule. Smluvní vztah vzniká mezi uživatelem a poskytovatelem.
    Provozovatel nepřijímá, nedrží ani nepřevádí peníze ani kryptoaktiva uživatelů a neshromažďuje KYC doklady.

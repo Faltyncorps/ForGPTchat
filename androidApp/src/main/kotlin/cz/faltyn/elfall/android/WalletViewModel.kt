@@ -229,7 +229,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(elfallNetwork = n, error = null) }
     }
     fun stellarAssetLabels(): List<String> = DevAssets.stellarTestnetAssets().map { a ->
-        if (a.referenceUsd != null) "${a.symbol} (ref ${a.referenceUsd} USD, testnet)" else a.symbol
+        if (a.frozen) "${a.symbol} (zmrazeno)" else if (a.referenceUsd != null) "${a.symbol} (ref ${a.referenceUsd} USD, testnet)" else a.symbol
     }
     val flcReferenceUsd get() = FLC_REFERENCE_USD
 
