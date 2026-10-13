@@ -1,0 +1,17 @@
+# Soubory, jejichž změna vyžaduje nový podpis manifestu vlastníkem (scripts/sign_manifest.sh)
+integrity/critical.json
+integrity/allowed_signers
+shared/src/commonMain/kotlin/cz/faltyn/elfall/shared/assets/DevAssets.kt
+shared/src/commonMain/kotlin/cz/faltyn/elfall/shared/offramp/StubProviders.kt
+shared/src/commonMain/kotlin/cz/faltyn/elfall/shared/offramp/OffRampProvider.kt
+shared/src/commonMain/kotlin/cz/faltyn/elfall/shared/integrity/CriticalConstants.kt
+shared/src/commonMain/kotlin/cz/faltyn/elfall/shared/integrity/StellarTomlVerifier.kt
+scripts/issue_flc_testnet.py
+runpod/app/config.py
+web/.well-known/stellar.toml
+web/_headers
+LICENSE
+AUTHORS
+NOTICE
+.github/CODEOWNERS
+.github/workflows/integrity.yml
