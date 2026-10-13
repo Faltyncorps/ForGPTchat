@@ -39,6 +39,13 @@ struct OnboardingView: View {
                 }
             }
             Section { NetworkView() }
+            if BankIdFlags.enabled { // feature flag, výchozí VYPNUTO (sandbox)
+                Section("Ověření identity") {
+                    // TODO(bankid): BankIdVerifier.start(KYC) + ASWebAuthenticationSession
+                    Button("Ověřit přes Bank iD") {}
+                    Text("Testovací prostředí (sandbox) – nepoužívejte skutečné údaje.").font(.footnote)
+                }
+            }
         }
     }
 }
@@ -94,6 +101,10 @@ struct TransferView: View {
                     Text("Komu: \(p.destination)").font(.footnote)
                     Text("Částka: \(m.facade.formatSats(sats: p.amountSats)) BTC")
                     Text("Poplatek: \(p.feeSats) sats (\(p.feeRateSatPerVb) sat/vB)")
+                    if BankIdFlags.enabled {
+                        // Potvrzovací krok: step-up Bank iD svázaný s hashem transakce (WithdrawalGate)
+                        Button("Potvrdit výběr přes Bank iD") {}
+                    }
                     Button("Potvrdit Face ID a odeslat") { m.send() }
                 }
             }
@@ -150,3 +161,7 @@ struct NetworkView: View {
         .onAppear { if m.snapshot == nil { m.loadNetwork() } }
     }
 }
+
+
+/// Bank iD feature flag – výchozí VYPNUTO. Zrcadlí IdentityFlags.bankIdEnabled ze shared modulu.
+enum BankIdFlags { static let enabled = false }
