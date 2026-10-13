@@ -12,3 +12,5 @@ Komponenty třetích stran (vlastní licence): fr.acinq bitcoin-kmp (Apache-2.0)
 kotlinx.coroutines / kotlinx.serialization (Apache-2.0), stellar-sdk Python (Apache-2.0),
 httpx (BSD-3), FastAPI (MIT), runpod (MIT), web/vendor-qr.js (qrcode-generator, MIT, Kazuhiko Arase).
 Úplný seznam: SBOM artefakt z workflow .github/workflows/sbom.yml.
+
+Ověření vlastníka: Totožnost vlastníka a autora (Ivo Faltýn, GitHub @ivosicek123) je ověřitelná přes Bankovní identitu (Bank iD, Bankovní identita, a.s.); integrace viz docs/bankid.md. Repozitář neobsahuje žádné osobní údaje.
