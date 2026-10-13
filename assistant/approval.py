@@ -26,7 +26,8 @@ FORBIDDEN_ACTIONS = frozenset({
     "deploy_malware", "surveillance", "ddos",
 })
 
-ALWAYS_IVO = frozenset({"gdpr", "security_breach", "illegal", "legal_uncertain", "funds_at_risk"})
+ALWAYS_IVO = frozenset({"gdpr", "security_breach", "illegal", "legal_uncertain", "funds_at_risk",
+                        "money_movement", "key_handling", "critical"})
 
 SIGNAL_WEIGHTS = {
     "seed_leak_suspected": 5.0,

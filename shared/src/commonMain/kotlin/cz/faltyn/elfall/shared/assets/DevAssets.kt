@@ -27,6 +27,8 @@ object DevAssets {
         DevAsset("sepETH", "ETH", "ethereum-sepolia", "native"),
         DevAsset("devSOL", "SOL", "solana-devnet", "native"),
         DevAsset("amoyMATIC", "MATIC", "polygon-amoy", "native"),
+        DevAsset("sBTC", "BTC", "bitcoin-signet", "native"),
+        DevAsset("tLTC", "LTC", "litecoin-testnet", "native"),
         DevAsset("FLC", "FLC", "stellar-testnet", "credit_alphanum4", issuerPublic = "GCUMZ6Z7GAYFL2MGSFRG7HXDPL4FRBPZYAYJGTWEEKDI3NJIFUMSRPKT", referenceUsd = FLC_REFERENCE_USD),
         DevAsset("yFLC", "yFLC", "stellar-testnet", "credit_alphanum4", issuerPublic = "GCUMZ6Z7GAYFL2MGSFRG7HXDPL4FRBPZYAYJGTWEEKDI3NJIFUMSRPKT", referenceUsd = FLC_REFERENCE_USD),
     )

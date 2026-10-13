@@ -6,5 +6,9 @@ wallets, malware, surveillance) are intentionally NOT implemented and are reject
 """
 from .gemini import GeminiClient, Option
 from .approval import ApprovalGate, Approver, Decision, Incident, DefensiveAction
+from .hierarchy import (AuditLog, FallcoinSupervisor, GeminiAnalyst, Hierarchy, IvoWatchdog, RateLimiter,
+                        Review, Tier, Verdict)
 
-__all__ = ["GeminiClient", "Option", "ApprovalGate", "Approver", "Decision", "Incident", "DefensiveAction"]
+__all__ = ["GeminiClient", "Option", "ApprovalGate", "Approver", "Decision", "Incident", "DefensiveAction",
+           "AuditLog", "FallcoinSupervisor", "GeminiAnalyst", "Hierarchy", "IvoWatchdog", "RateLimiter",
+           "Review", "Tier", "Verdict"]
