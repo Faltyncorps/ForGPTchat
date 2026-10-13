@@ -133,3 +133,19 @@ const saved = store.get('watch');
 if (saved) { $('watchAddr').value = saved; renderQr(saved); }
 loadBalance();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+
+// --- Bank iD (sandbox) – feature flag, výchozí VYPNUTO ---
+const BANKID_ENABLED = false;
+const BANKID_BACKEND = ''; // URL backend/bankid služby (jen přes HTTPS)
+(function bankId() {
+  const card = document.getElementById('bankid-card');
+  if (!card || !BANKID_ENABLED || !BANKID_BACKEND) return;
+  card.hidden = false;
+  document.getElementById('bankid-verify').addEventListener('click', async () => {
+    try {
+      const r = await fetch(BANKID_BACKEND + '/auth/start', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({purpose: 'kyc'})});
+      if (!r.ok) throw new Error(r.status);
+      location.assign((await r.json()).authorize_url);
+    } catch (e) { alert('Ověření přes Bank iD se nezdařilo'); }
+  });
+})();
