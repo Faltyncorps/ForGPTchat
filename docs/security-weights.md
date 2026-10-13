@@ -25,3 +25,20 @@ nelegalita, ohrožení prostředků) vždy → úroveň 5 / Ivo. Implementace: `
 | Validace adres + náhled poplatku před odesláním | 4 | ✅ |
 | Audit log incidentů (hash řetězec) | 3 | stub |
 | Rate-limit / zámek po selhání autentizace | 3 | systémový (BiometricPrompt) |
+
+## Závazná pravidla a omezení (deny-by-default)
+1. **Žádný sběr tajemství:** aplikace, PWA, AI, backend ani podpora nikdy nežádají, nepřijímají, neloggují ani neukládají
+   seed, mnemonic, privátní klíč, xprv, heslo, PIN, OTP, CVV ani čísla karet. Kontext s takovými klíči je zahozen
+   (`GeminiClient.sanitize`) a incident jde rovnou Ivovi (`secret_material_in_context`).
+2. **Pouze obrana:** žádný hack-back, protiútok, skenování cizích systémů, DDoS, malware, dekódování cizích peněženek
+   (§ 230–232 TZ). Neznámá akce = zamítnuto.
+3. **Povinná eskalace:** úroveň ≥ 4, GDPR, bezpečnost, právo/nelegalita, pohyb peněz, práce s klíči → vždy Ivo.
+   Nejistota = o úroveň výš. Žádný timeout nesmí vést k automatickému schválení.
+4. **Logování:** každé rozhodnutí do hash-řetězeného audit logu (bez hodnot osobních údajů a tajemství).
+5. **Rate limity:** asistent 20 rozhodnutí / 60 s na zdroj (pak eskalace); backend proxy 60 req/min/IP;
+   biometrie dle systému + zámek po 5 neúspěších.
+6. **Deny-by-default:** povolené jsou jen vyjmenované akce, endpointy (`runpod/devnet/devnet.json`) a domény (CSP).
+7. **GDPR minimalizace:** žádné účty, žádná analytika třetích stran; do AI promptu jen anonymizovaný kontext.
+8. **Retence:** provozní logy 30 dní, audit log incidentů 12 měsíců, důkazy k řízení po dobu řízení; pak smazat.
+9. **KYC/AML** provádějí výhradně licencovaní poskytovatelé (MiCA CASP) v jejich rozhraní; ELFALL KYC data nepřijímá.
+10. **Supply chain:** GitHub Actions připnuté na SHA, Dependabot, CodeQL, žádná tajemství v repozitáři.

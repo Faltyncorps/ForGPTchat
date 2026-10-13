@@ -1,14 +1,32 @@
 # Podmínky použití – Eleanor / ELFALL (návrh, testovací verze)
 
-*Tento text je pracovní návrh, nikoli právní posouzení. Před ostrým provozem nechte zkontrolovat advokátem (MiCA, AML zákon č. 253/2008 Sb., GDPR).*
+*Pracovní návrh, nikoli právní posouzení. Před ostrým provozem nechte zkontrolovat advokátem (MiCA – nařízení (EU) 2023/1114,
+zákon č. 31/2025 Sb., AML zákon č. 253/2008 Sb., nařízení (EU) 2023/1113, GDPR).*
 
-1. **Provozovatel:** Ivo Faltyn (dále „provozovatel“). Kontakt uveden v aplikaci.
-2. **Povaha služby:** Eleanor je **nekustodiální** peněženka. Seed a klíče má výhradně uživatel ve svém zařízení. Provozovatel k nim nemá přístup a nemůže obnovit ztracený seed.
-3. **Testovací režim:** Aktuální verze pracuje jen s **testnetem**. Testnet mince nemají žádnou hodnotu. Mainnet data jsou pouze informativní.
-4. **Výběry na kartu / směny (ELFALL):** zajišťují licencovaní poskytovatelé (např. Anycoin, MoonPay) v jejich vlastním rozhraní, včetně KYC/AML. Na jejich služby se vztahují jejich podmínky.
-5. **AI asistent:** Odpovědi AI (Gemini) jsou informativní, mohou být nepřesné a nejsou finančním ani právním poradenstvím. AI nikdy nevyžaduje seed ani klíče – kdo o ně žádá, je podvodník.
-6. **Zakázané užití:** praní peněz, financování terorismu, podvody, útoky na cizí systémy, pokusy o prolomení cizích peněženek, obcházení sankcí. Provozovatel může omezit funkce aplikace při podezření.
-7. **Bezpečnost:** Provozovatel používá výhradně obranná opatření (detekce, blokace, logování, zneplatnění relací, zmrazení funkcí, uchování důkazů a jejich předání orgánům). Neprovádí žádné protiútoky.
-8. **Osobní údaje (GDPR):** Aplikace neodesílá osobní údaje provozovateli. Veřejná blockchain API (mempool.space, Horizon) vidí IP adresu a dotazované adresy. Incidenty s osobními údaji eskaluje provozovatel osobně a hlásí dle čl. 33 GDPR.
-9. **Odpovědnost:** Software je poskytován „tak, jak je“, bez záruky. Provozovatel neodpovídá za ztrátu seedu, chybně zadanou adresu ani za služby třetích stran, v rozsahu dovoleném zákonem.
-10. **Změny:** Podmínky se mohou měnit; o podstatných změnách informuje aplikace.
+1. **Provozovatel:** Ivo Faltyn (dále „provozovatel“). Kontakt je uveden v aplikaci.
+2. **Povaha služby:** Eleanor je **nekustodiální** peněženka. Seed a klíče má výhradně uživatel ve svém zařízení. Provozovatel
+   k nim nemá přístup, nemůže je obnovit ani za uživatele podepsat transakci.
+3. **Nikdy nesdílejte seed ani klíče.** Provozovatel, aplikace, AI asistent ani podpora o ně **nikdy** nežádají. Kdo o ně
+   žádá, je podvodník. Totéž platí pro hesla, PIN, kódy SMS/OTP a údaje platebních karet.
+4. **Testovací režim:** Aktuální verze pracuje jen s **testnetem**. Testnet mince ani tokeny FLC/yFLC nemají žádnou hodnotu.
+   Údaj „1 FLC = 9,33 USD“ je pouze zobrazovací konstanta – **není to peg, stabilní hodnota, nárok na výplatu ani investice**.
+5. **Výběry na kartu / směny:** zajišťují výhradně **licencovaní poskytovatelé** (poskytovatelé služeb kryptoaktiv dle MiCA)
+   v jejich vlastním rozhraní, včetně KYC/AML a Travel Rule. Smluvní vztah vzniká mezi uživatelem a poskytovatelem.
+   Provozovatel nepřijímá, nedrží ani nepřevádí peníze ani kryptoaktiva uživatelů a neshromažďuje KYC doklady.
+6. **AI asistent:** Odpovědi AI (Gemini) jsou informativní, mohou být nepřesné a nejsou finančním, daňovým ani právním
+   poradenstvím. AI nemůže nic schválit ani provést; kritická rozhodnutí činí člověk (provozovatel).
+7. **Zakázané užití:** praní peněz, financování terorismu, obcházení sankcí, podvody, útoky na cizí systémy, pokusy o prolomení
+   cizích peněženek, automatizované zneužívání (boti, přetěžování). Při podezření může provozovatel omezit nebo zmrazit
+   funkce aplikace a předat zachované důkazy příslušným orgánům.
+8. **Bezpečnost – pouze obrana:** Provozovatel používá výhradně obranná opatření (detekce, blokace, logování, rate limity,
+   zneplatnění relací, zmrazení funkcí, uchování důkazů). **Neprovádí žádné protiútoky („hack-back“).** Bezpečnostní
+   incidenty, GDPR a právní otázky rozhoduje vždy osobně provozovatel.
+9. **Osobní údaje (GDPR):** Zpracováváme jen nezbytné minimum (minimalizace dle čl. 5 GDPR). Aplikace nevyžaduje účet a
+   neodesílá provozovateli osobní údaje. Veřejná blockchain API (mempool.space, Blockstream, Horizon) vidí IP adresu a
+   dotazované adresy. **Doba uchování:** provozní logy max. 30 dní, záznamy o incidentech max. 12 měsíců, důkazy po dobu
+   řízení. Máte právo na přístup, opravu, výmaz, omezení a stížnost u ÚOOÚ. Porušení zabezpečení osobních údajů hlásíme
+   dle čl. 33 GDPR do 72 hodin.
+10. **Limity:** Služba může omezit počet požadavků (rate limit) a odmítnout požadavky, které nejsou výslovně povoleny.
+11. **Odpovědnost:** Software je poskytován „tak, jak je“, bez záruky. Provozovatel neodpovídá za ztrátu seedu, chybně zadanou
+    adresu, kolísání cen ani za služby třetích stran, v rozsahu dovoleném zákonem.
+12. **Změny:** Podmínky se mohou měnit; o podstatných změnách informuje aplikace předem.
