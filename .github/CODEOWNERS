@@ -9,3 +9,13 @@
 /scripts/               @ivosicek123
 /gradle/                @ivosicek123
 /SECURITY.md            @ivosicek123
+# Kritické hodnoty (issuer, kódy aktiv, ceny, URL poskytovatelů, atribuce) – vždy review vlastníka
+/integrity/                                                   @ivosicek123
+/shared/src/commonMain/kotlin/cz/faltyn/elfall/shared/assets/ @ivosicek123
+/shared/src/commonMain/kotlin/cz/faltyn/elfall/shared/offramp/ @ivosicek123
+/shared/src/commonMain/kotlin/cz/faltyn/elfall/shared/integrity/ @ivosicek123
+/web/.well-known/                                             @ivosicek123
+/AUTHORS                                                      @ivosicek123
+/NOTICE                                                       @ivosicek123
+/LICENSE                                                      @ivosicek123
+/.github/workflows/integrity.yml                              @ivosicek123
