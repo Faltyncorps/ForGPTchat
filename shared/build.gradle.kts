@@ -26,6 +26,8 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
+            implementation("io.ktor:ktor-client-mock:$ktorVersion")
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
         }
         androidMain.dependencies {

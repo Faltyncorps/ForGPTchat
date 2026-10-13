@@ -19,4 +19,13 @@ class DevAssetsTests {
         assertTrue(ElfallNetwork.TESTNET.isTestnet)
         assertTrue(!ElfallNetwork.MAINNET.isTestnet)
     }
+
+    @Test fun stellarAssetsKeepHardcodedIssuerWhenNullPassed() {
+        val hard = DevAssets.catalogue.first { it.id == "FLC" }.issuerPublic
+        val flc = DevAssets.stellarTestnetAssets(null).filter { it.id == "FLC" || it.id == "yFLC" }
+        assertEquals(2, flc.size)
+        flc.forEach { assertEquals(hard, it.issuerPublic) }
+        val override = DevAssets.stellarTestnetAssets("GOVERRIDE").first { it.id == "FLC" }
+        assertEquals("GOVERRIDE", override.issuerPublic)
+    }
 }

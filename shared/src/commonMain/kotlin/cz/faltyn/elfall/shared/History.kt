@@ -45,8 +45,8 @@ object HistoryMapper {
         }
 }
 
-suspend fun EsploraClient.addressTxs(address: String): List<EsploraTx> = httpClient.get("$base/address/$address/txs").body()
-suspend fun EsploraClient.tipHeight(): Long = httpClient.get("$base/blocks/tip/height").body<String>().trim().toLong()
+suspend fun EsploraClient.addressTxs(address: String): List<EsploraTx> = getJson("/address/$address/txs")
+suspend fun EsploraClient.tipHeight(): Long = getText("/blocks/tip/height").trim().toLong()
 
 @Serializable data class HorizonPayments(@SerialName("_embedded") val embedded: HorizonEmbedded = HorizonEmbedded())
 @Serializable data class HorizonEmbedded(val records: List<HorizonPayment> = emptyList())

@@ -7,7 +7,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * Android uses the underlying classes directly.
  */
 class EleanorFacade(val network: BtcNetwork) {
-    private val esplora = EsploraClient(network.esploraUrl)
+    private val esplora = EsploraClient.forNetwork(network)
     private var wallet: WalletCore? = null
 
     fun generateMnemonic(): List<String> = WalletCore.newMnemonic()

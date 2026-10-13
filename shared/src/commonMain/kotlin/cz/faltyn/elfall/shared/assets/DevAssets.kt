@@ -33,6 +33,6 @@ object DevAssets {
 
     fun stellarTestnetAssets(issuerPublic: String? = null): List<DevAsset> =
         catalogue.filter { it.networkId == "stellar-testnet" }.map {
-            if (it.id == "FLC" || it.id == "yFLC") it.copy(issuerPublic = issuerPublic) else it
+            if (it.id == "FLC" || it.id == "yFLC") it.copy(issuerPublic = issuerPublic ?: it.issuerPublic) else it
         }
 }

@@ -63,7 +63,7 @@ data class UiState(
 class WalletViewModel(app: Application) : AndroidViewModel(app) {
     private val store = KeystoreSeedStore(app)
     private val network = BtcNetwork.fromName(BuildConfig.BTC_NETWORK)
-    private val esplora = EsploraClient(network.esploraUrl)
+    private val esplora = EsploraClient.forNetwork(network)
     private val horizon = HorizonClient()
     private val netInfo = NetworkInfoClient()
     private var wallet: WalletCore? = null
