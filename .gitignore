@@ -17,3 +17,9 @@ scripts/flc_keys.json
 scripts/.env
 __pycache__/
 *.pyc
+.env.*
+!.env.example
+*.pem
+*.p12
+*.key
+keystore.properties

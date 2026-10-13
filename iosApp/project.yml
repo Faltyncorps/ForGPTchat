@@ -26,6 +26,9 @@ targets:
         NSFaceIDUsageDescription: "Face ID chrání vaši peněženku / Face ID protects your wallet seed."
         NSCameraUsageDescription: "Skenování QR adres / Scan payment QR codes."
         ELEANOR_STANDALONE: true
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: false
+          NSAllowsArbitraryLoadsInWebContent: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: cz.faltyn.eleanor.testnet

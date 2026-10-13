@@ -6,6 +6,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
 
+# Least privilege: run as non-root
+RUN useradd --system --uid 10001 --no-create-home elfall && chown -R elfall /app
+USER 10001
+
 ENV NETWORK=testnet
 ENV PYTHONUNBUFFERED=1
 
