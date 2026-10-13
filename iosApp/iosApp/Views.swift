@@ -143,6 +143,8 @@ struct NetworkView: View {
                 if let p = s.prices, let usd = p.usd { Text("BTC: \(Int(usd.doubleValue)) USD (mainnet trh)") }
                 ForEach(s.recentBlocks, id: \.id) { b in Text("#\(b.height) · \(b.txCount) tx").font(.caption) }
             } else { ProgressView() }
+            Divider()
+            Text("© 2026 Ivo Faltýn — autor, vývojář a vlastník projektu ELFALL / Fallcoin / Eleanor (GitHub @ivosicek123)").font(.caption)
         }
         .padding()
         .onAppear { if m.snapshot == nil { m.loadNetwork() } }

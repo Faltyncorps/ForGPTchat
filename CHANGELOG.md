@@ -1,5 +1,14 @@
 # ELFALL – Changelog
 
+Autor a vlastník: Ivo Faltýn — autor, vývojář a vlastník projektu ELFALL / Fallcoin / Eleanor (GitHub @ivosicek123).
+
+## 0.4.2 – hardening-2 (2026-10-13, lokální větev)
+- MiCA checklist: právo na odstoupení opraveno na **14 dní** (čl. 13).
+- Gradle dependency verification (`gradle/verification-metadata.xml`, SHA-256), pip `--require-hashes` (`runpod/requirements.lock.txt`).
+- Workflow OpenSSF Scorecard + SBOM (SPDX/CycloneDX), připnuté SHA.
+- Přísnější CSP, `SECURITY.md`, `.github/CODEOWNERS`, rozšířený `.gitignore`.
+- Atribuce autorství: `LICENSE`, `AUTHORS`, `NOTICE`, About obrazovky (web/Android/iOS), `pyproject.toml`.
+
 ## 0.4.1 – Provider & FLC policy update (2026-10-13)
 - Off-ramp: only **MoonPay** and **Coinbase** active (Coinbase stub added). Ramp, Banxa, Transak, Mercuryo removed (see `docs/offramp-providers.md`); Anycoin no longer in active list.
 - **yFLC frozen** (zmrazeno): flagged in assets, not issued by `scripts/issue_flc_testnet.py`, no price in RunPod worker.

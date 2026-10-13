@@ -3,7 +3,7 @@
 *Pracovní návrh, nikoli právní posouzení. Před ostrým provozem nechte zkontrolovat advokátem (MiCA – nařízení (EU) 2023/1114,
 zákon č. 31/2025 Sb., AML zákon č. 253/2008 Sb., nařízení (EU) 2023/1113, GDPR).*
 
-1. **Provozovatel:** Ivo Faltyn (dále „provozovatel“). Kontakt je uveden v aplikaci.
+1. **Provozovatel a autor:** Ivo Faltýn — autor, vývojář a vlastník projektu ELFALL / Fallcoin / Eleanor (GitHub @ivosicek123; dále „provozovatel“). Kontakt je uveden v aplikaci.
 2. **Povaha služby:** Eleanor je **nekustodiální** peněženka. Seed a klíče má výhradně uživatel ve svém zařízení. Provozovatel
    k nim nemá přístup, nemůže je obnovit ani za uživatele podepsat transakci.
 3. **Nikdy nesdílejte seed ani klíče.** Provozovatel, aplikace, AI asistent ani podpora o ně **nikdy** nežádají. Kdo o ně

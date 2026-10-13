@@ -22,7 +22,7 @@
       constant*, never "peg/stable/redeemable", no reserve claims.
 - [ ] If FLC is a plain "other crypto-asset" (no stabilisation, no reference) offered to the public in the EU or admitted
       to trading → **Title II crypto-asset white paper** (Art. 4–6), notified to ČNB (Art. 8), marketing communications
-      rules (Art. 7), liability for the white paper (Art. 15), 12-month retail withdrawal right (Art. 13).
+      rules (Art. 7), liability for the white paper (Art. 15), 14-day retail right of withdrawal (Art. 13 MiCA: 14 calendar days, free of charge, without giving reasons; does not apply if the crypto-asset was already admitted to trading before purchase).
 - [x] **yFLC is FROZEN (zmrazeno)** by owner decision 2026-10-13: not issued, not distributed, not priced.
 - [ ] yFLC ("yield") – any promised yield/interest: EMT/ART must not grant interest (Art. 40, 50); yield products may
       also be MiFID II financial instruments → out of MiCA, into securities law. Get legal opinion before mainnet.

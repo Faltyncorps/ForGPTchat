@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="wallet_title">ELFALL</string>
+    <string name="about_author">© 2026 Ivo Faltýn — autor, vývojář a vlastník projektu ELFALL / Fallcoin / Eleanor (GitHub @ivosicek123)</string>
     <string name="create_wallet">Create new wallet / Nová peněženka</string>
     <string name="restore_wallet">Restore from 12 words / Obnovit</string>
     <string name="wallet_balance">Balance / Zůstatek</string>
