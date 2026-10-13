@@ -1,0 +1,11 @@
+# Každá změna vyžaduje review vlastníka (aktivujte "Require review from Code Owners" v rulesetu).
+*                       @ivosicek123
+/.github/               @ivosicek123
+/shared/                @ivosicek123
+/androidApp/            @ivosicek123
+/iosApp/                @ivosicek123
+/web/_headers           @ivosicek123
+/runpod/                @ivosicek123
+/scripts/               @ivosicek123
+/gradle/                @ivosicek123
+/SECURITY.md            @ivosicek123

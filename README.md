@@ -6,6 +6,10 @@
 
 > ⚠️ Early development. Defaults to **testnet**. Do not use with real funds until a security review is done.
 
+## Autor a vlastník / Author & owner
+
+**Ivo Faltýn — autor, vývojář a vlastník projektu ELFALL / Fallcoin / Eleanor** (GitHub [@ivosicek123](https://github.com/ivosicek123)). Viz [AUTHORS](AUTHORS), [NOTICE](NOTICE), [LICENSE](LICENSE).
+
 ## Modes
 
 | Mode | Description |

@@ -323,6 +323,7 @@ private fun SettingsPanel(s: UiState, vm: WalletViewModel) {
             Text("Seed je uložen jen v tomto zařízení (Android Keystore). Nikdy ho nesdílejte.", style = MaterialTheme.typography.bodySmall)
             HorizontalDivider()
             Text("Síť: ${s.network.name.lowercase()} (podpis jen na testnetu)")
+            Text(stringResource(R.string.about_author), style = MaterialTheme.typography.bodySmall)
             Text("Verze: ${BuildConfig.VERSION_NAME}${if (s.standalone) " · Eleanor standalone" else " · ELFALL"}", style = MaterialTheme.typography.bodySmall)
             Text("Podmínky použití: docs/terms-cs.md", style = MaterialTheme.typography.bodySmall)
             OutlinedButton(onClick = vm::lock) { Text("🔒 Zamknout peněženku") }
