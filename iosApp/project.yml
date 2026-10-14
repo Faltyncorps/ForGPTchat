@@ -20,6 +20,7 @@ targets:
     platform: iOS
     sources:
       - path: iosApp
+      - path: RustCore        # UniFFI vazby, kompilují se jen s RUST_CORE
     dependencies:
       - package: Sodium
     info:
@@ -29,6 +30,8 @@ targets:
         CFBundleShortVersionString: "0.5.0"
         CFBundleVersion: "3"
         UILaunchScreen: {}
+        UIApplicationSceneManifest:          # UIKit: AppDelegate + SceneDelegate (místo SwiftUI App)
+          UIApplicationSupportsMultipleScenes: false
         NSFaceIDUsageDescription: "Face ID chrání vaši peněženku / Face ID protects your wallet seed."
         NSCameraUsageDescription: "Skenování QR adres / Scan payment QR codes."
         ELEANOR_STANDALONE: true
@@ -44,3 +47,13 @@ targets:
         FRAMEWORK_SEARCH_PATHS: "$(SRCROOT)/../shared/build/bin/iosSimulatorArm64/debugFramework $(SRCROOT)/../shared/build/bin/iosArm64/debugFramework"
         OTHER_LDFLAGS: "-framework Shared -lc++"
         EXCLUDED_ARCHS[sdk=iphonesimulator*]: x86_64
+  EleanorTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [ Tests ]
+    dependencies:
+      - target: Eleanor
+      - package: Sodium
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES

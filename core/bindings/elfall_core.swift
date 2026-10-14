@@ -481,6 +481,345 @@ fileprivate struct FfiConverterData: FfiConverterRustBuffer {
 }
 
 
+
+
+public protocol SecureChannelProtocol: AnyObject, Sendable {
+    
+    func acceptHeader(header: Data) throws 
+    
+    /**
+     * Výzva pro podpis klíčem Secure Enclave (váže device-bound token na tuto relaci).
+     */
+    func binding() throws  -> Data
+    
+    func header() throws  -> Data
+    
+    func `open`(ciphertext: Data) throws  -> ChannelMessage
+    
+    func publicKey() throws  -> Data
+    
+    func seal(msg: Data, last: Bool) throws  -> Data
+    
+}
+open class SecureChannel: SecureChannelProtocol, @unchecked Sendable {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_elfall_core_fn_clone_securechannel(self.pointer, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_elfall_core_fn_free_securechannel(pointer, $0) }
+    }
+
+    
+    /**
+     * Klient s efemérním párem a připnutým `server_pk` backendu.
+     */
+public static func client(serverPk: Data)throws  -> SecureChannel  {
+    return try  FfiConverterTypeSecureChannel_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+    uniffi_elfall_core_fn_constructor_securechannel_client(
+        FfiConverterData.lower(serverPk),$0
+    )
+})
+}
+    
+    /**
+     * Serverová strana (testy / referenční implementace); `server_secret` 32 B.
+     */
+public static func server(serverSecret: Data, clientPk: Data)throws  -> SecureChannel  {
+    return try  FfiConverterTypeSecureChannel_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+    uniffi_elfall_core_fn_constructor_securechannel_server(
+        FfiConverterData.lower(serverSecret),
+        FfiConverterData.lower(clientPk),$0
+    )
+})
+}
+    
+
+    
+open func acceptHeader(header: Data)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+    uniffi_elfall_core_fn_method_securechannel_accept_header(self.uniffiClonePointer(),
+        FfiConverterData.lower(header),$0
+    )
+}
+}
+    
+    /**
+     * Výzva pro podpis klíčem Secure Enclave (váže device-bound token na tuto relaci).
+     */
+open func binding()throws  -> Data  {
+    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+    uniffi_elfall_core_fn_method_securechannel_binding(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func header()throws  -> Data  {
+    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+    uniffi_elfall_core_fn_method_securechannel_header(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func `open`(ciphertext: Data)throws  -> ChannelMessage  {
+    return try  FfiConverterTypeChannelMessage_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+    uniffi_elfall_core_fn_method_securechannel_open(self.uniffiClonePointer(),
+        FfiConverterData.lower(ciphertext),$0
+    )
+})
+}
+    
+open func publicKey()throws  -> Data  {
+    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+    uniffi_elfall_core_fn_method_securechannel_public_key(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func seal(msg: Data, last: Bool)throws  -> Data  {
+    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+    uniffi_elfall_core_fn_method_securechannel_seal(self.uniffiClonePointer(),
+        FfiConverterData.lower(msg),
+        FfiConverterBool.lower(last),$0
+    )
+})
+}
+    
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSecureChannel: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = SecureChannel
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> SecureChannel {
+        return SecureChannel(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: SecureChannel) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SecureChannel {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: SecureChannel, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSecureChannel_lift(_ pointer: UnsafeMutableRawPointer) throws -> SecureChannel {
+    return try FfiConverterTypeSecureChannel.lift(pointer)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSecureChannel_lower(_ value: SecureChannel) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeSecureChannel.lower(value)
+}
+
+
+
+
+public struct ChannelMessage {
+    public var data: Data
+    public var last: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(data: Data, last: Bool) {
+        self.data = data
+        self.last = last
+    }
+}
+
+#if compiler(>=6)
+extension ChannelMessage: Sendable {}
+#endif
+
+
+extension ChannelMessage: Equatable, Hashable {
+    public static func ==(lhs: ChannelMessage, rhs: ChannelMessage) -> Bool {
+        if lhs.data != rhs.data {
+            return false
+        }
+        if lhs.last != rhs.last {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(data)
+        hasher.combine(last)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeChannelMessage: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ChannelMessage {
+        return
+            try ChannelMessage(
+                data: FfiConverterData.read(from: &buf), 
+                last: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ChannelMessage, into buf: inout [UInt8]) {
+        FfiConverterData.write(value.data, into: &buf)
+        FfiConverterBool.write(value.last, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeChannelMessage_lift(_ buf: RustBuffer) throws -> ChannelMessage {
+    return try FfiConverterTypeChannelMessage.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeChannelMessage_lower(_ value: ChannelMessage) -> RustBuffer {
+    return FfiConverterTypeChannelMessage.lower(value)
+}
+
+
+public struct KxKeypair {
+    public var `public`: Data
+    public var secret: Data
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(`public`: Data, secret: Data) {
+        self.`public` = `public`
+        self.secret = secret
+    }
+}
+
+#if compiler(>=6)
+extension KxKeypair: Sendable {}
+#endif
+
+
+extension KxKeypair: Equatable, Hashable {
+    public static func ==(lhs: KxKeypair, rhs: KxKeypair) -> Bool {
+        if lhs.`public` != rhs.`public` {
+            return false
+        }
+        if lhs.secret != rhs.secret {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(`public`)
+        hasher.combine(secret)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeKxKeypair: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> KxKeypair {
+        return
+            try KxKeypair(
+                public: FfiConverterData.read(from: &buf), 
+                secret: FfiConverterData.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: KxKeypair, into buf: inout [UInt8]) {
+        FfiConverterData.write(value.`public`, into: &buf)
+        FfiConverterData.write(value.secret, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeKxKeypair_lift(_ buf: RustBuffer) throws -> KxKeypair {
+    return try FfiConverterTypeKxKeypair.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeKxKeypair_lower(_ value: KxKeypair) -> RustBuffer {
+    return FfiConverterTypeKxKeypair.lower(value)
+}
+
+
 public enum CoreError: Swift.Error {
 
     
@@ -587,6 +926,12 @@ extension CoreError: Foundation.LocalizedError {
 
 
 
+public func channelKeypair()throws  -> KxKeypair  {
+    return try  FfiConverterTypeKxKeypair_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+    uniffi_elfall_core_fn_func_channel_keypair($0
+    )
+})
+}
 public func ed25519Generate()throws  -> Data  {
     return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
     uniffi_elfall_core_fn_func_ed25519_generate($0
@@ -693,6 +1038,9 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
+    if (uniffi_elfall_core_checksum_func_channel_keypair() != 43519) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_elfall_core_checksum_func_ed25519_generate() != 32853) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -727,6 +1075,30 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_elfall_core_checksum_func_vault_seal() != 21508) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_elfall_core_checksum_method_securechannel_accept_header() != 24280) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_elfall_core_checksum_method_securechannel_binding() != 48526) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_elfall_core_checksum_method_securechannel_header() != 53137) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_elfall_core_checksum_method_securechannel_open() != 33962) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_elfall_core_checksum_method_securechannel_public_key() != 14639) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_elfall_core_checksum_method_securechannel_seal() != 7999) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_elfall_core_checksum_constructor_securechannel_client() != 91) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_elfall_core_checksum_constructor_securechannel_server() != 38206) {
         return InitializationResult.apiChecksumMismatch
     }
 
