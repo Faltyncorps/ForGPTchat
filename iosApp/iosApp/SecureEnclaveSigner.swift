@@ -8,6 +8,7 @@ import Shared
 final class SecureEnclaveSigner: NSObject, HardwareKeySigner {
     private let tag = "cz.faltyn.elfall.devicekey".data(using: .utf8)!
     private(set) var isHardwareBacked: Bool = false
+    var algorithm: String { "ES256" }  // Kotlin default z rozhraní se do Swiftu nepřenáší
 
     private func loadOrCreate() throws -> SecKey {
         let q: [String: Any] = [kSecClass as String: kSecClassKey, kSecAttrApplicationTag as String: tag,
