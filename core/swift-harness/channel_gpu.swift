@@ -49,4 +49,12 @@ func channelAndGpuTests() {
     check(elfall_gpu_live_allocations() == live0, "gpu: deallocator uvolnil")
     do { _ = try! RustGpuAllocation.chart(values: [1, 2, 3]) }  // nepředaná alokace → deinit uvolní
     check(elfall_gpu_live_allocations() == live0, "gpu: nepředaný buffer uvolněn v deinit")
+
+    // vypůjčená paměť volajícího (jako MTLBuffer.contents() alokovaný Metalem) – Rust nic nevlastní
+    let need = elfall_gpu_chart_bytes(8)
+    let mem = UnsafeMutableRawPointer.allocate(byteCount: need + 16, alignment: 16); defer { mem.deallocate() }
+    mem.initializeMemory(as: UInt8.self, repeating: 0xAA, count: need + 16)
+    let w = [Float(1), 2].withUnsafeBufferPointer { elfall_gpu_chart_write($0.baseAddress, $0.count, 8, mem.assumingMemoryBound(to: UInt8.self), need + 16) }
+    check(w == need && mem.load(fromByteOffset: need, as: UInt8.self) == 0xAA, "gpu: zápis do vypůjčené paměti volajícího, nic za koncem")
+    check(elfall_gpu_chart_write(nil, 0, 8, mem.assumingMemoryBound(to: UInt8.self), need - 1) < 0, "gpu: malý cíl odmítnut")
 }

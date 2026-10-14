@@ -202,10 +202,30 @@ final class HistoryViewController: UITableViewController {
             // kumulativní zůstatek (od nejstarší) → animovaný přechod grafu
             var acc: Int64 = 0
             let series = h.reversed().map { item -> Float in acc += item.netSats; return Float(acc) / 1e8 }
+            #if RUST_CORE
+            // Face ID + Secure Enclave → Rust dešifruje → zero-copy MTLBuffer → Metal (jednou za zobrazení)
+            if !self.secureShown, !series.isEmpty,
+               let sealed = RustCoreVault.shared.seal(field: "chart", series.map { String($0) }.joined(separator: ",")) {
+                self.secureShown = true
+                SecureRenderFlow.showSealedChart(field: "chart", sealed: sealed, in: self.chart) { [weak self] r in
+                    if case .failure = r { self?.chart.setSeries(series) }   // fallback: CPU cesta bez Rustu
+                }
+                return
+            }
+            #endif
             self.chart.setSeries(series)
         }.store(in: &bag)
     }
-    override func viewWillAppear(_ animated: Bool) { super.viewWillAppear(animated); model.loadHistory() }
+    #if RUST_CORE
+    private var secureShown = false
+    #endif
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        #if RUST_CORE
+        secureShown = false
+        #endif
+        model.loadHistory()
+    }
 
     override func tableView(_ t: UITableView, numberOfRowsInSection s: Int) -> Int { model.history.count }
     override func tableView(_ t: UITableView, cellForRowAt ip: IndexPath) -> UITableViewCell {

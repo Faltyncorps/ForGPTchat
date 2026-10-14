@@ -1,3 +1,5 @@
+#![allow(clippy::undocumented_unsafe_blocks)] // testy záměrně volají C ABI s neplatnými vstupy
+static SERIAL: std::sync::Mutex<()> = std::sync::Mutex::new(());
 use elfall_core::{channel::{self, Channel, Keypair}, gpu, vault, CoreError};
 
 fn pair() -> (Channel, Channel) {
@@ -63,6 +65,7 @@ fn channel_input_validation() {
 
 #[test]
 fn gpu_buffer_is_page_aligned_and_freed_once() {
+    let _g = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
     let page = gpu::page_size();
     assert!(page >= 16384 && page.is_power_of_two());
     let before = gpu::live_allocations();
@@ -87,6 +90,7 @@ fn f2(b: &[u8], i: usize) -> (f32, f32) {
 
 #[test]
 fn gpu_chart_layout_from_sealed_vault() {
+    let _g = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
     let key = [0x42u8; 32];
     let sealed = vault::seal(&key, "chart", "10, 20,15").unwrap();
     let b = gpu::chart_from_sealed(&key, "chart", &sealed, 3).unwrap();
@@ -104,6 +108,7 @@ fn gpu_chart_layout_from_sealed_vault() {
 
 #[test]
 fn gpu_c_abi_errors_leave_empty_out() {
+    let _g = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
     let mut out = gpu::ElfallGpuBuffer { ptr: std::ptr::dangling_mut::<u8>(), len: 1, capacity: 1 };
     let v = [f32::NAN];
     let r = unsafe { gpu::elfall_gpu_chart_from_values(v.as_ptr(), 1, 8, &mut out) };
@@ -113,4 +118,23 @@ fn gpu_c_abi_errors_leave_empty_out() {
     let r = unsafe { gpu::elfall_gpu_chart_from_values(std::ptr::null(), 0, 4, &mut out) };
     assert_eq!(r, 0);
     assert_eq!(unsafe { gpu::elfall_gpu_buffer_free(out.ptr.cast(), out.capacity) }, 0);
+}
+
+#[test]
+fn gpu_write_into_borrowed_caller_memory() {
+    let _g = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+    let need = gpu::chart_bytes(4).unwrap();
+    let mut mem = vec![0xAAu8; need + 8];
+    assert_eq!(gpu::write_chart(&[1.0, 2.0], 4, &mut mem).unwrap(), need);
+    assert_eq!(&mem[need..], &[0xAA; 8], "za koncem se nepíše");
+    let mut small = vec![0u8; need - 1];
+    assert_eq!(gpu::write_chart(&[1.0], 4, &mut small).err(), Some(CoreError::InvalidLength));
+    let r = unsafe { gpu::elfall_gpu_chart_write([1.0f32, 2.0].as_ptr(), 2, 4, mem.as_mut_ptr(), mem.len()) };
+    assert_eq!(r as usize, need);
+    assert!(unsafe { gpu::elfall_gpu_chart_write(std::ptr::null(), 0, 4, std::ptr::null_mut(), 0) } < 0);
+    assert_eq!(gpu::elfall_gpu_chart_bytes(1), 0);
+    let b = gpu::chart_vertices(&[3.0, 1.0], 4).unwrap();
+    let v = b.view();
+    assert_eq!(v.as_slice(), b.as_slice());
+    assert_eq!(v.len, need);
 }

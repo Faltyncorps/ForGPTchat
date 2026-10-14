@@ -2,6 +2,12 @@ import XCTest
 @testable import Eleanor
 
 final class ChartMathTests: XCTestCase {
+    func testUnitFitAndRustPointCount() {
+        let m = ChartMath.unitFit()
+        for p in [SIMD2<Float>(0, 0), SIMD2(1, 1)] { let c = m * SIMD4(p.x, p.y, 0, 1); XCTAssert(abs(c.x) <= 1.0001 && abs(c.y) < 1) }
+        XCTAssertEqual(ChartMath.rustPointCount(bytes: 64 * 24), 64)
+        XCTAssertNil(ChartMath.rustPointCount(bytes: 25)); XCTAssertNil(ChartMath.rustPointCount(bytes: 24))
+    }
     func testResampleEndpoints() {
         let p = ChartMath.resample([0, 10], count: 5)
         XCTAssertEqual(p.first!.y, 0); XCTAssertEqual(p.last!.y, 10); XCTAssertEqual(p[2].y, 5, accuracy: 1e-5)
@@ -46,6 +52,25 @@ final class RustCoreInteropTests: XCTestCase {
         XCTAssertTrue(sodium.sign.verify(message: Bytes(try signingInput(msg: msg)), publicKey: Bytes(pk), signature: Bytes(sig)))
         let h = try pinHash(pin: "2468")
         XCTAssertTrue(sodium.pwHash.strVerify(hash: h, passwd: Bytes("2468".utf8)))
+    }
+}
+
+import Metal
+#if canImport(elfall_coreFFI)
+import elfall_coreFFI
+#endif
+final class RustGpuZeroCopyTests: XCTestCase {
+    func testNoCopyBufferSharesRustMemoryAndFreesOnRelease() throws {
+        guard let dev = MTLCreateSystemDefaultDevice() else { throw XCTSkip("bez Metal zařízení") }
+        let live = elfall_gpu_live_allocations()
+        let a = try RustGpuAllocation.chart(values: [1, 3, 2], points: 64)
+        let ptr = a.pointer
+        var buf: MTLBuffer? = SecureRenderFlow.makeNoCopyBuffer(dev, a)
+        XCTAssertEqual(buf?.contents(), ptr, "žádná kopie")
+        XCTAssertEqual(buf?.length, a.capacity)
+        XCTAssertNil(a.take(), "vlastnictví už má Metal")
+        buf = nil
+        XCTAssertEqual(elfall_gpu_live_allocations(), live, "deallocator uvolnil Rust paměť")
     }
 }
 #endif

@@ -27,6 +27,7 @@ extern "C" {
 }
 
 pub fn page_size() -> usize {
+    // SAFETY: getpagesize nemá vstupy ani vedlejší účinky (POSIX, Linux i Darwin).
     let p = unsafe { getpagesize() };
     let p = if p > 0 { p as usize } else { MIN_PAGE };
     p.max(MIN_PAGE)
@@ -35,7 +36,7 @@ pub fn page_size() -> usize {
 /// Vlastněný buffer na straně Rustu; `into_raw` předá vlastnictví přes C ABI.
 pub struct PageBuffer { ptr: *mut u8, len: usize, cap: usize }
 
-// Ukazatel je výhradně vlastněn tímto objektem.
+// SAFETY: ukazatel je výhradně vlastněn tímto objektem (žádné sdílené aliasy), přesun mezi vlákny je bezpečný.
 unsafe impl Send for PageBuffer {}
 
 impl PageBuffer {
@@ -44,6 +45,7 @@ impl PageBuffer {
         if len == 0 { return Err(CoreError::InvalidLength); }
         let cap = len.checked_add(page - 1).ok_or(CoreError::InvalidLength)? / page * page;
         let layout = Layout::from_size_align(cap, page).map_err(|_| CoreError::InvalidLength)?;
+        // SAFETY: layout má nenulovou velikost (len > 0, cap ≥ page) a platné zarovnání (mocnina 2).
         let ptr = unsafe { alloc_zeroed(layout) };
         if ptr.is_null() { return Err(CoreError::Rng); }
         LIVE.lock().map_err(|_| CoreError::Rng)?.insert(ptr as usize, cap);
@@ -53,8 +55,14 @@ impl PageBuffer {
     pub fn is_empty(&self) -> bool { self.len == 0 }
     pub fn capacity(&self) -> usize { self.cap }
     pub fn as_ptr(&self) -> *const u8 { self.ptr }
-    pub fn as_mut_slice(&mut self) -> &mut [u8] { unsafe { std::slice::from_raw_parts_mut(self.ptr, self.len) } }
-    pub fn as_slice(&self) -> &[u8] { unsafe { std::slice::from_raw_parts(self.ptr, self.len) } }
+    pub fn as_mut_slice(&mut self) -> &mut [u8] {
+        // SAFETY: ptr je živá alokace ≥ len bajtů vlastněná self; &mut self zaručuje výlučný přístup.
+        unsafe { std::slice::from_raw_parts_mut(self.ptr, self.len) }
+    }
+    pub fn as_slice(&self) -> &[u8] {
+        // SAFETY: ptr je živá alokace ≥ len bajtů; výpůjčka je svázána s &self.
+        unsafe { std::slice::from_raw_parts(self.ptr, self.len) }
+    }
     pub fn into_raw(self) -> ElfallGpuBuffer {
         let r = ElfallGpuBuffer { ptr: self.ptr, len: self.len, capacity: self.cap };
         std::mem::forget(self);
@@ -75,6 +83,8 @@ fn free_raw(ptr: *mut u8, cap: usize) -> Result<(), CoreError> {
     live.remove(&(ptr as usize));
     drop(live);
     let page = page_size();
+    // SAFETY: (ptr, cap) byl v registru → pochází z `PageBuffer::new` s Layout(cap, page) a ještě nebyl uvolněn;
+    // z registru je odstraněn před dealloc, takže dvojí uvolnění není možné.
     unsafe {
         crate::sodium::memzero(std::slice::from_raw_parts_mut(ptr, cap));
         dealloc(ptr, Layout::from_size_align_unchecked(cap, page));
@@ -84,30 +94,61 @@ fn free_raw(ptr: *mut u8, cap: usize) -> Result<(), CoreError> {
 
 pub fn live_allocations() -> usize { LIVE.lock().map(|l| l.len()).unwrap_or(usize::MAX) }
 
-/// Zpracování: převzorkování na `points` bodů a normalizace do [0,1]².
-pub fn chart_vertices(values: &[f32], points: usize) -> Result<PageBuffer, CoreError> {
+/// Bajtů potřebných pro graf s `points` body (n lineStrip + 2n výplň, float2).
+pub fn chart_bytes(points: usize) -> Result<usize, CoreError> {
     if !(2..=MAX_POINTS).contains(&points) { return Err(CoreError::InvalidLength); }
+    Ok(points * 3 * 8)
+}
+
+/// Zpracování do **vypůjčeného** cíle (`&mut [u8]` žije jen po dobu volání) – bezpečný Rust.
+/// Převzorkování na `points` bodů a normalizace do [0,1]². `out` musí mít přesně `chart_bytes(points)`
+/// nebo víc (zbytek se nechá být).
+pub fn write_chart(values: &[f32], points: usize, out: &mut [u8]) -> Result<usize, CoreError> {
+    let need = chart_bytes(points)?;
+    let out = out.get_mut(..need).ok_or(CoreError::InvalidLength)?;
     if values.iter().any(|v| !v.is_finite()) { return Err(CoreError::BadFrame); }
     let v: Vec<f32> = match values.len() { 0 => vec![0.0, 0.0], 1 => vec![values[0], values[0]], _ => values.to_vec() };
     let (lo, hi) = v.iter().fold((f32::INFINITY, f32::NEG_INFINITY), |(a, b), &x| (a.min(x), b.max(x)));
-    let span = if hi - lo > 1e-9 { hi - lo } else { 1.0 };
-    let mut buf = PageBuffer::new(points * 3 * 8)?;
-    let out = buf.as_mut_slice();
+    let flat = hi - lo <= 1e-9;
     let mut put = |i: usize, x: f32, y: f32| {
-        out[i * 8..i * 8 + 4].copy_from_slice(&x.to_ne_bytes());
-        out[i * 8 + 4..i * 8 + 8].copy_from_slice(&y.to_ne_bytes());
+        let c = &mut out[i * 8..i * 8 + 8];
+        c[..4].copy_from_slice(&x.to_ne_bytes());
+        c[4..].copy_from_slice(&y.to_ne_bytes());
     };
     for i in 0..points {
         let x = i as f32 / (points - 1) as f32;
         let t = x * (v.len() - 1) as f32;
         let k = (t.floor() as usize).min(v.len() - 2);
         let y = v[k] + (v[k + 1] - v[k]) * (t - k as f32);
-        let y = if hi - lo > 1e-9 { (y - lo) / span } else { 0.5 };
+        let y = if flat { 0.5 } else { (y - lo) / (hi - lo) };
         put(i, x, y);
         put(points + 2 * i, x, y);
         put(points + 2 * i + 1, x, 0.0);
     }
+    Ok(need)
+}
+
+/// Zpracování do nového Rust-vlastněného stránkově zarovnaného bufferu.
+pub fn chart_vertices(values: &[f32], points: usize) -> Result<PageBuffer, CoreError> {
+    let mut buf = PageBuffer::new(chart_bytes(points)?)?;
+    write_chart(values, points, buf.as_mut_slice())?;
     Ok(buf)
+}
+
+/// Vypůjčený pohled na data (C ABI): platí jen dokud žije `&'a PageBuffer` – kompilátor brání
+/// použití po uvolnění v Rustu; přes C ABI to hlídá registr (`elfall_gpu_buffer_free`).
+#[repr(C)]
+pub struct GpuSlice<'a> { pub ptr: *const u8, pub len: usize, _borrow: std::marker::PhantomData<&'a [u8]> }
+
+impl PageBuffer {
+    pub fn view(&self) -> GpuSlice<'_> { GpuSlice { ptr: self.ptr, len: self.len, _borrow: std::marker::PhantomData } }
+}
+
+impl<'a> GpuSlice<'a> {
+    pub fn as_slice(&self) -> &'a [u8] {
+        // SAFETY: vzniká jen z `PageBuffer::view`; `'a` je svázáno s výpůjčkou bufferu, ptr/len platné.
+        unsafe { std::slice::from_raw_parts(self.ptr, self.len) }
+    }
 }
 
 /// Vault (`sv1:`, pole jako AD) → čísla oddělená čárkou → vrcholy. Plaintext se po použití nuluje.
@@ -135,8 +176,17 @@ unsafe fn bytes<'a>(p: *const u8, n: usize) -> Result<&'a [u8], CoreError> {
 fn finish(out: *mut ElfallGpuBuffer, r: Result<PageBuffer, CoreError>) -> i32 {
     if out.is_null() { return code(CoreError::InvalidLength); } // r se zahodí a uvolní
     match r {
-        Ok(b) => { unsafe { out.write(b.into_raw()) }; 0 }
-        Err(e) => { unsafe { out.write(EMPTY) }; code(e) }
+        // SAFETY: invarianty modulu (viz hlavička) – ukazatele z živých Rust bufferů, délky ověřené typem/kontrolou výše.
+        Ok(b) => {
+            // SAFETY: viz níže – out není null a je zapisovatelný.
+            unsafe { out.write(b.into_raw()) };
+            0
+        }
+        Err(e) => {
+            // SAFETY: out není null (kontrola výše) a podle kontraktu C ABI ukazuje na zapisovatelný ElfallGpuBuffer.
+            unsafe { out.write(EMPTY) };
+            code(e)
+        }
     }
 }
 
@@ -177,6 +227,23 @@ pub unsafe extern "C" fn elfall_gpu_buffer_free(ptr: *mut std::os::raw::c_void, 
     if ptr.is_null() { return 0; }
     match free_raw(ptr.cast(), capacity) { Ok(()) => 0, Err(e) => code(e) }
 }
+
+/// Zápis do **paměti volajícího** (např. `MTLBuffer.contents()` alokovaný Metalem): Rust si ji jen
+/// vypůjčí na dobu volání (`&mut [u8]`), nic si neuloží. Vrací počet zapsaných bajtů, nebo záporný kód.
+///
+/// # Safety
+/// `out` ukazuje na `out_len` zapisovatelných bajtů, které po dobu volání nikdo jiný nečte ani nepíše
+/// (GPU je nesmí používat – volající čeká na dokončení command bufferu nebo používá nový buffer).
+#[no_mangle]
+pub unsafe extern "C" fn elfall_gpu_chart_write(values: *const f32, n: usize, points: u32, out: *mut u8, out_len: usize) -> isize {
+    if out.is_null() { return code(CoreError::InvalidLength) as isize; }
+    let v: &[f32] = if n == 0 { &[] } else if values.is_null() { return code(CoreError::InvalidLength) as isize } else { std::slice::from_raw_parts(values, n) };
+    let o = std::slice::from_raw_parts_mut(out, out_len);
+    match write_chart(v, points as usize, o) { Ok(w) => w as isize, Err(e) => code(e) as isize }
+}
+
+#[no_mangle]
+pub extern "C" fn elfall_gpu_chart_bytes(points: u32) -> usize { chart_bytes(points as usize).unwrap_or(0) }
 
 #[no_mangle]
 pub extern "C" fn elfall_gpu_live_allocations() -> usize { live_allocations() }

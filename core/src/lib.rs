@@ -2,6 +2,7 @@
 //! Androidem/iOS (UniFFI, feature `ffi`) a webem (wasm-bindgen, feature `wasm`).
 #![deny(unsafe_code)] // výjimky: `sodium` (FFI do libsodium) a `gpu` (C ABI bufferů pro Metal)
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![deny(clippy::undocumented_unsafe_blocks)] // každý unsafe blok má SAFETY s invariantem
 
 pub mod framing;
 pub mod validate;

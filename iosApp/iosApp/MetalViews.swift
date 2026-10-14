@@ -215,6 +215,9 @@ final class ChartRenderer: MetalRenderer {
     private let duration: CFTimeInterval = 0.6
 
     func setSeries(_ values: [Float]) {
+        #if RUST_CORE
+        rust = nil                                     // nová data z CPU cesty mají přednost; MTLBuffer uvolní Metal
+        #endif
         let v = values.isEmpty ? [0, 0] : (values.count == 1 ? [values[0], values[0]] : values)
         let pts = ChartMath.resample(v, count: 64)
         from = to.isEmpty ? pts.map { SIMD2($0.x, pts.map(\.y).min() ?? 0) } : current()
@@ -226,7 +229,45 @@ final class ChartRenderer: MetalRenderer {
     private func current() -> [SIMD2<Float>] { let e = ChartMath.easeInOutCubic(t()); return zip(from, to).map { simd_mix($0, $1, SIMD2(repeating: e)) } }
     private func currentMatrix() -> simd_float4x4 { ChartMath.mix(fromM, toM, ChartMath.easeInOutCubic(t())) }
 
+    #if RUST_CORE
+    /// Vrcholy z Rustu (zero-copy MTLBuffer, formát ELFALL-GPU-CHART-v1: n bodů lineStrip, pak 2n výplň).
+    /// Buffer se jen čte; nahrazení na hlavním vlákně – starý uvolní Metal po dokončení snímků.
+    private var rust: (buf: MTLBuffer, n: Int)?
+    private var rustStart: CFTimeInterval = 0
+    private let dot = GPU.pipeline("chart_dot_vertex", "chart_dot_fragment", blending: true)
+    func setRustVertices(_ buf: MTLBuffer, points n: Int) {
+        // délka bufferu je capacity (stránky) ≥ 3n·8 B – shader nečte za 3n vrcholů
+        guard n >= 2, buf.length >= 3 * n * MemoryLayout<SIMD2<Float>>.stride else { rust = nil; return }
+        rust = (buf, n); rustStart = CACurrentMediaTime()
+    }
+    private func encodeRust(_ enc: MTLRenderCommandEncoder, _ r: (buf: MTLBuffer, n: Int), _ fill: MTLRenderPipelineState, _ line: MTLRenderPipelineState) {
+        let tint = SIMD4<Float>(0.2, 0.55, 1.0, 1)
+        let p = ChartMath.easeOutCubic(Float(min(1, (CACurrentMediaTime() - rustStart) / duration)))   // odkrytí po Face ID
+        var u = ChartUniforms(transform: ChartMath.unitFit(), lineColor: tint,
+                              fillTop: SIMD4(tint.x, tint.y, tint.z, 0.35), fillBottom: SIMD4(tint.x, tint.y, tint.z, 0), progress: p)
+        let stride = MemoryLayout<SIMD2<Float>>.stride
+        enc.setRenderPipelineState(fill)
+        enc.setVertexBuffer(r.buf, offset: r.n * stride, index: 0)
+        enc.setVertexBytes(&u, length: MemoryLayout<ChartUniforms>.stride, index: 1)
+        enc.setFragmentBytes(&u, length: MemoryLayout<ChartUniforms>.stride, index: 1)
+        enc.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 2 * r.n)
+        enc.setRenderPipelineState(line)
+        enc.setVertexBuffer(r.buf, offset: 0, index: 0)
+        enc.drawPrimitives(type: .lineStrip, vertexStart: 0, vertexCount: r.n)
+        if let dot, p >= 1 {
+            var last = UInt32(r.n - 1)
+            enc.setRenderPipelineState(dot)
+            enc.setVertexBytes(&last, length: MemoryLayout<UInt32>.stride, index: 2)
+            enc.drawPrimitives(type: .point, vertexStart: 0, vertexCount: 1)
+        }
+    }
+    private var rustAnimating: Bool { CACurrentMediaTime() - rustStart < duration + 0.05 }
+    #endif
+
     func encode(_ enc: MTLRenderCommandEncoder, viewport: SIMD2<Float>, scale: Float, time: Float) -> Bool {
+        #if RUST_CORE
+        if let fill, let line, let r = rust { encodeRust(enc, r, fill, line); return rustAnimating }
+        #endif
         guard let fill, let line, !to.isEmpty else { return false }
         let pts = current(), m = currentMatrix(), base = ChartMath.unfit(m).y
         var strip: [SIMD2<Float>] = []; strip.reserveCapacity(pts.count * 2)
@@ -257,6 +298,9 @@ final class MetalChartView: UIView {
     }
     required init?(coder: NSCoder) { fatalError() }
     override func layoutSubviews() { super.layoutSubviews(); canvas.frame = bounds.insetBy(dx: 12, dy: 12) }
+    #if RUST_CORE
+    func setRustVertices(_ buf: MTLBuffer, points: Int) { chart.setRustVertices(buf, points: points); canvas.setNeedsRender() }
+    #endif
     func setSeries(_ values: [Float]) {
         chart.setSeries(values); canvas.setNeedsRender()
         accessibilityValue = values.last.map { String(format: "%.8f BTC", $0) }

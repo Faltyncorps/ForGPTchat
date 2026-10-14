@@ -70,3 +70,21 @@ fragment float4 scene_fragment(TexOut in [[stage_in]], constant SceneUniforms &u
     }
     return col;
 }
+
+// ---------- Zero-copy graf z Rustu (ELFALL-GPU-CHART-v1) – značka posledního bodu ----------
+// Vrcholy jsou v [0,1]² (normalizuje Rust); transformace stejná ChartUniforms. Bod = SDF kruh s halo.
+struct DotOut { float4 pos [[position]]; float size [[point_size]]; };
+
+vertex DotOut chart_dot_vertex(uint vid [[vertex_id]], const device float2 *pts [[buffer(0)]],
+                               constant ChartUniforms &u [[buffer(1)]], constant uint &index [[buffer(2)]]) {
+    DotOut o; o.pos = u.transform * float4(pts[index], 0, 1); o.size = 18.0; return o;
+}
+
+fragment float4 chart_dot_fragment(DotOut in [[stage_in]], float2 pc [[point_coord]], constant ChartUniforms &u [[buffer(1)]]) {
+    float d = length(pc - 0.5) * 2.0;                          // 0 střed … 1 okraj
+    float core = 1.0 - smoothstep(0.42, 0.5, d);
+    float halo = (1.0 - smoothstep(0.5, 1.0, d)) * 0.35 * u.progress;
+    float a = max(core, halo);
+    if (a <= 0.0) discard_fragment();
+    return float4(mix(u.lineColor.rgb, float3(1.0), core * 0.6), a * u.lineColor.a);
+}

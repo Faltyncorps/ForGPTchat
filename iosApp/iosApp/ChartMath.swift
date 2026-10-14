@@ -40,6 +40,16 @@ enum ChartMath {
                                        simd_mix(a.columns.2, b.columns.2, w), simd_mix(a.columns.3, b.columns.3, w)))
     }
 
+    /// Matice pro vrcholy normalizované Rustem do [0,1]² (ELFALL-GPU-CHART-v1) – stejný 8% okraj jako `fit`.
+    static func unitFit() -> simd_float4x4 { ortho(left: 0, right: 1, bottom: -0.08, top: 1.08) }
+
+    /// Počet bodů z velikosti dat Rust bufferu (n bodů lineStrip + 2n výplň, float2) – nil, pokud nesedí.
+    static func rustPointCount(bytes: Int) -> Int? {
+        let per = 3 * MemoryLayout<SIMD2<Float>>.stride
+        guard bytes > 0, bytes % per == 0, bytes / per >= 2 else { return nil }
+        return bytes / per
+    }
+
     static func easeInOutCubic(_ t: Float) -> Float { t < 0.5 ? 4 * t * t * t : 1 - pow(-2 * t + 2, 3) / 2 }
     static func easeOutCubic(_ t: Float) -> Float { 1 - pow(1 - t, 3) }
 

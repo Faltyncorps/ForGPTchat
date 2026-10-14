@@ -17,3 +17,7 @@ int32_t elfall_gpu_chart_from_sealed(const uint8_t *key, size_t key_len, const u
 // Jediný povolený způsob uvolnění (volá deallocator MTLBufferu). Dvojí/cizí free -> záporné, nic se nestane.
 int32_t elfall_gpu_buffer_free(void *ptr, size_t capacity);
 size_t elfall_gpu_live_allocations(void);
+// Zápis do paměti volajícího (MTLBuffer.contents()); Rust si ji jen vypůjčí na dobu volání.
+// Vrací zapsané bajty (= elfall_gpu_chart_bytes(points)) nebo záporný kód.
+intptr_t elfall_gpu_chart_write(const float *values, size_t n, uint32_t points, uint8_t *out, size_t out_len);
+size_t elfall_gpu_chart_bytes(uint32_t points);
