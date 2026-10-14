@@ -52,7 +52,7 @@ class ZeroTrustTest {
     @Test fun missingProof() { val tk = tok(); deny { zt.verify("GET", "/wallet", "DPoP $tk", null) } }
     @Test fun otherDeviceKeyRejected() { val tk = tok(); deny { zt.verify("GET", "/wallet", "DPoP $tk", proof(k = ECKeyGenerator(Curve.P_256).generate(), token = tk)) } }
     @Test fun wrongMethodOrUrl() { val tk = tok(); deny { zt.verify("POST", "/wallet", "DPoP $tk", proof(token = tk)) }; deny { zt.verify("GET", "/admin", "DPoP $tk", proof(token = tk)) } }
-    @Test fun proofReplay() { val tk = tok(); val p = proof(token = tk); zt.verify("GET", "/wallet", "DPoP $tk", p); deny { zt.verify("GET", "/wallet", "DPoP $tk", p) } }
+    @Test fun proofReplay() { val tk = tok(); val p = proof(token = tk); zt.verify("GET", "/wallet", "DPoP $tk", p); deny { zt.verify("GET", "/wallet", "DPoP $tk", p) }; assertEquals(1L, zt.metrics.replay.get()) }
     @Test fun staleProof() { val tk = tok(); deny { zt.verify("GET", "/wallet", "DPoP $tk", proof(token = tk, iat = t - 120)) } }
     @Test fun athMismatch() { val tk = tok(); deny { zt.verify("GET", "/wallet", "DPoP $tk", proof(token = tk + "x")) } }
     @Test fun tamperedToken() { val tk = tok(); val bad = tk.dropLast(2) + if (tk.endsWith("AA")) "BB" else "AA"; deny { zt.verify("GET", "/wallet", "DPoP $bad", proof(token = bad)) } }

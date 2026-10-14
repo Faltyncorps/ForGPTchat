@@ -94,8 +94,23 @@ fun main() {
         bankIdModule(cfg, bank)
         passkeys?.let { passkeyModule(it) } // zapnuto jen při nastaveném WEBAUTHN_RP_ID
         // Zero Trust (deny-by-default + DPoP tokeny ≤ 5 min) – jen s passkeys a ZT_PUBLIC_BASE_URL
-        val ztBase = System.getenv("ZT_PUBLIC_BASE_URL")
-        val ztCfg = ztBase?.let { ZtConfig.fromEnv(it) }
-        if (passkeys != null && ztCfg != null) zeroTrustModule(ZeroTrust(ztCfg), passkeys)
+        // Postupné nasazení: ZT_ENABLE=true (výchozí vypnuto), viz deploy/rollout/README.md
+        val zt = ztFromEnv(System.getenv())
+        if (passkeys != null && zt != null) {
+            zeroTrustModule(zt, passkeys)
+            // metriky na odděleném interním listeneru (Prometheus), ne na veřejném portu
+            val mPort = System.getenv("ZT_METRICS_PORT")?.toInt() ?: 9464
+            embeddedServer(ServerCIO, port = mPort, host = System.getenv("ZT_METRICS_BIND") ?: "127.0.0.1") {
+                routing { get("/metrics") { zt.checkAuditChain(); call.respondText(zt.metrics.metricsText(), io.ktor.http.ContentType.parse("text/plain; version=0.0.4")) } }
+            }.start(wait = false)
+        }
     }.start(wait = true)
+}
+
+/** Zero Trust jen při ZT_ENABLE=true + ZT_PUBLIC_BASE_URL + klíči ze secret store; revokace v ZT_REVOCATION_FILE. */
+fun ztFromEnv(e: Map<String, String>): ZeroTrust? {
+    if (e["ZT_ENABLE"]?.lowercase() != "true") return null
+    val cfg = e["ZT_PUBLIC_BASE_URL"]?.let { ZtConfig.fromEnv(it, e) } ?: return null
+    val store = FileRevocationStore(java.io.File(e["ZT_REVOCATION_FILE"] ?: "/var/lib/elfall/zt-revocations.log"))
+    return ZeroTrust(cfg, store = store)
 }

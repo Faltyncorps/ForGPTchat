@@ -33,6 +33,7 @@ import java.util.Base64
 import java.util.Date
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Zero Trust: krátkodobé (≤ 5 min) sender-constrained přístupové tokeny ve stylu DPoP (RFC 9449).
@@ -97,25 +98,43 @@ class AuditLog(private val sink: (String) -> Unit = { System.err.println(it) }) 
     }
 }
 
-class ZeroTrust(val cfg: ZtConfig, val audit: AuditLog = AuditLog(), private val now: () -> Long = { System.currentTimeMillis() / 1000 }) {
-    private val revokedCreds = ConcurrentHashMap.newKeySet<String>()
-    private val revokedDevices = ConcurrentHashMap.newKeySet<String>()
-    private val seenJti = ConcurrentHashMap<String, Long>()
+/** Čítače pro Prometheus (exportuje [metricsText]); jen počty a důvody, nikdy tokeny/klíče/uživatelé. */
+class ZtMetrics {
+    val allow = AtomicLong(); val issued = AtomicLong(); val replay = AtomicLong(); val auditChainFailures = AtomicLong()
+    val deny = ConcurrentHashMap<String, AtomicLong>()
+    fun denied(reason: String) { deny.computeIfAbsent(reason.replace(Regex("[^\\p{L}\\p{N} /_.-]"), "_")) { AtomicLong() }.incrementAndGet() }
+    fun metricsText(): String = buildString {
+        append("# TYPE elfall_zt_allow_total counter\nelfall_zt_allow_total ${allow.get()}\n")
+        append("# TYPE elfall_zt_tokens_issued_total counter\nelfall_zt_tokens_issued_total ${issued.get()}\n")
+        append("# TYPE elfall_zt_dpop_replay_total counter\nelfall_zt_dpop_replay_total ${replay.get()}\n")
+        append("# TYPE elfall_zt_audit_chain_failures_total counter\nelfall_zt_audit_chain_failures_total ${auditChainFailures.get()}\n")
+        append("# TYPE elfall_zt_deny_total counter\n")
+        deny.toSortedMap().forEach { (r, v) -> append("elfall_zt_deny_total{reason=\"${r.replace("\"", "")}\"} ${v.get()}\n") }
+    }
+}
+
+class ZeroTrust(
+    val cfg: ZtConfig,
+    val audit: AuditLog = AuditLog(),
+    private val now: () -> Long = { System.currentTimeMillis() / 1000 },
+    private val store: RevocationStore = InMemoryRevocationStore(),
+    val metrics: ZtMetrics = ZtMetrics(),
+) {
     private val verifier = Ed25519Verifier(cfg.signingKey.toPublicJWK())
 
-    fun revokeCredential(id: String) { revokedCreds += id; audit.record("revoke", "-", "credential", ts = now()) }
-    fun revokeDevice(jkt: String) { revokedDevices += jkt; audit.record("revoke", "-", "device", ts = now()) }
+    fun revokeCredential(id: String) { store.add(RevocationKind.CREDENTIAL, id, now()); audit.record("revoke", "-", "credential", ts = now()) }
+    fun revokeDevice(jkt: String) { store.add(RevocationKind.DEVICE, jkt, now()); audit.record("revoke", "-", "device", ts = now()) }
 
     /** Vydá token po úspěšném ověření passkey + důkazu držení klíče zařízení. */
     fun issue(user: String, credentialId: String, deviceKey: ECKey): String {
         val jkt = thumbprint(deviceKey)
-        if (credentialId in revokedCreds || jkt in revokedDevices) throw ZtDenied("odvolaný klíč")
+        if (store.contains(RevocationKind.CREDENTIAL, credentialId) || store.contains(RevocationKind.DEVICE, jkt)) throw ZtDenied("odvolaný klíč")
         val t = now()
         val claims = JWTClaimsSet.Builder().subject(user).claim("cred", credentialId)
             .claim("cnf", mapOf("jkt" to jkt)).issueTime(Date(t * 1000)).expirationTime(Date((t + cfg.tokenTtlS) * 1000))
             .jwtID(UUID.randomUUID().toString()).build()
         val jwt = SignedJWT(JWSHeader.Builder(JWSAlgorithm.EdDSA).type(JOSEObjectType("at+jwt")).keyID(cfg.signingKey.keyID).build(), claims)
-        jwt.sign(Ed25519Signer(cfg.signingKey)); return jwt.serialize()
+        jwt.sign(Ed25519Signer(cfg.signingKey)); metrics.issued.incrementAndGet(); return jwt.serialize()
     }
 
     /** Ověří DPoP důkaz (podpis klíčem zařízení, htm/htu/iat/jti[, ath]) a vrátí veřejný klíč. */
@@ -133,7 +152,7 @@ class ZeroTrust(val cfg: ZtConfig, val audit: AuditLog = AuditLog(), private val
         if (kotlin.math.abs(now() - iat) > cfg.proofMaxAgeS) throw ZtDenied("DPoP prošlý")
         if (accessToken != null && c.getStringClaim("ath") != b64(sha256(accessToken.toByteArray()))) throw ZtDenied("DPoP ath")
         val jti = c.jwtid ?: throw ZtDenied("DPoP jti")
-        gc(); if (seenJti.putIfAbsent(jti, iat) != null) throw ZtDenied("DPoP replay")
+        gc(); if (!store.addJtiIfAbsent(jti, iat)) { metrics.replay.incrementAndGet(); throw ZtDenied("DPoP replay") }
         return jwk
     }
 
@@ -149,14 +168,17 @@ class ZeroTrust(val cfg: ZtConfig, val audit: AuditLog = AuditLog(), private val
         if (now() >= exp || exp - iat > cfg.tokenTtlS) throw ZtDenied("token vypršel")
         val cred = c.getStringClaim("cred") ?: throw ZtDenied("cred")
         @Suppress("UNCHECKED_CAST") val jkt = (c.getJSONObjectClaim("cnf")?.get("jkt") as? String) ?: throw ZtDenied("cnf")
-        if (cred in revokedCreds) throw ZtDenied("odvolaný passkey")
-        if (jkt in revokedDevices) throw ZtDenied("odvolané zařízení")
+        if (store.contains(RevocationKind.CREDENTIAL, cred)) throw ZtDenied("odvolaný passkey")
+        if (store.contains(RevocationKind.DEVICE, jkt)) throw ZtDenied("odvolané zařízení")
         val key = verifyProof(proof, method, path, token)
         if (thumbprint(key) != jkt) throw ZtDenied("klíč zařízení nesouhlasí")
         return ZtPrincipal(c.subject, cred, jkt)
     }
 
-    private fun gc() { val lim = now() - 2 * cfg.proofMaxAgeS; seenJti.entries.removeIf { it.value < lim } }
+    private fun gc() { val lim = now() - 2 * cfg.proofMaxAgeS; store.purgeJti(lim) }
+
+    /** Ověří hash řetěz auditního logu; selhání započítá do metriky (alert ZtAuditChainBroken). */
+    fun checkAuditChain(): Boolean = AuditLog.verifyChain(audit.lines).also { if (!it) metrics.auditChainFailures.incrementAndGet() }
 
     companion object {
         fun thumbprint(k: ECKey): String = k.toPublicJWK().computeThumbprint().toString()
@@ -177,8 +199,10 @@ val ZeroTrustPlugin = createApplicationPlugin("ZeroTrust", ::ZtPluginConfig) {
         try {
             val p = zt.verify(call.request.httpMethod.value, path, call.request.headers["Authorization"], call.request.headers["DPoP"])
             call.attributes.put(ZtPrincipalKey, p)
+            zt.metrics.allow.incrementAndGet()
             zt.audit.record("allow", path, "ok", p.user, ts = System.currentTimeMillis() / 1000)
         } catch (e: ZtDenied) {
+            zt.metrics.denied(e.reason)
             zt.audit.record("deny", path, e.reason, ts = System.currentTimeMillis() / 1000)
             call.response.headers.append("WWW-Authenticate", "DPoP algs=\"ES256\"")
             call.respondText("{\"error\":\"unauthorized\"}", io.ktor.http.ContentType.Application.Json, HttpStatusCode.Unauthorized)
@@ -208,6 +232,7 @@ fun Application.zeroTrustModule(zt: ZeroTrust, passkeys: PasskeyService) {
                 zt.audit.record("issue", "/zt/token", "ok", user, ts = System.currentTimeMillis() / 1000)
                 call.respondText(buildJsonObject { put("access_token", tok); put("token_type", "DPoP"); put("expires_in", zt.cfg.tokenTtlS) }.toString(), io.ktor.http.ContentType.Application.Json)
             }, { e ->
+                zt.metrics.denied((e as? ZtDenied)?.reason ?: "chyba")
                 zt.audit.record("deny", "/zt/token", (e as? ZtDenied)?.reason ?: "chyba", ts = System.currentTimeMillis() / 1000)
                 call.respondText("{\"error\":\"unauthorized\"}", io.ktor.http.ContentType.Application.Json, HttpStatusCode.Unauthorized)
             })

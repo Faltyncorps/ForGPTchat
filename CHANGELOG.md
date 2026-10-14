@@ -2,6 +2,15 @@
 
 Autor a vlastník: Ivo Faltýn — autor, vývojář a vlastník projektu ELFALL / Fallcoin / Eleanor (GitHub @ivosicek123).
 
+## 1.0.0-rc1 – release candidate (2026-10-14, neveřejný, lokální tag)
+- Zero Trust: interní tokeny EdDSA/Ed25519 (klíč jen ze secret store), DPoP vazba, TTL ≤ 5 min.
+- Perzistentní revokace (credential/device/jti přežijí restart): `RevocationStore` + souborový backend, SQL migrace `V1__zt_revocations.sql`.
+- Postupné nasazení: `ZT_ENABLE` (výchozí vypnuto), canary 1 → 10 → 50 → 100 % s rollbackem (`deploy/rollout/`), `/healthz` veřejný.
+- Monitoring: čítače ZT (`/metrics` na interním portu 9464), Prometheus alerty (`deploy/monitoring/zt-alerts.yaml`).
+- CI: Miri job (GPU buffery) a iOS macOS build s Rust jádrem – poběží po vyřešení GitHub billing.
+- Rust jádro (libsodium kanál, zero-copy Metal buffery), iOS UIKit/Metal, web Leptos CSR, Rocq/SPARK/Idris důkazy (sloučeno z větví).
+- Před vydáním: `docs/RELEASE-CHECKLIST.md`.
+
 ## 0.4.2 – hardening-2 (2026-10-13, lokální větev)
 - MiCA checklist: právo na odstoupení opraveno na **14 dní** (čl. 13).
 - Gradle dependency verification (`gradle/verification-metadata.xml`, SHA-256), pip `--require-hashes` (`runpod/requirements.lock.txt`).
