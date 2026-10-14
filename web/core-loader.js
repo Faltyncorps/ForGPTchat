@@ -3,7 +3,7 @@
 // CSP: script-src 'self' 'wasm-unsafe-eval' (bez 'unsafe-eval').
 import init, * as core from './wasm/elfall_core.js';
 
-const WASM_SHA384 = 'NrA7Mo4k9ov+NohnZgeS6z8gpl7hrnHH6bL8sWvVDPRsSvD+kDFaCV6yv5qPQXPE'; // aktualizuje scripts/build-wasm.sh
+const WASM_SHA384 = 'fqrW7I1MKQZdbmbj/w8iCBcmS5ZnnmeSuDYQb/maoeRM/3JbfGel/lSFkgoNzIpT'; // aktualizuje scripts/build-wasm.sh
 
 async function load() {
   const bytes = await (await fetch(new URL('./wasm/elfall_core_bg.wasm', import.meta.url))).arrayBuffer();

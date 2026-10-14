@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ElfallCore.xcframework z core/ (macOS + Xcode 15+, Rust 1.90.0 s cíli aarch64-apple-ios a aarch64-apple-ios-sim).
+# ElfallCore.xcframework z core/ (macOS + Xcode 15+, Rust 1.99.0 s cíli aarch64-apple-ios a aarch64-apple-ios-sim).
 # Výstup: core/build/ElfallCore.xcframework + iosApp/RustCore/elfall_core.swift (obaleno #if RUST_CORE).
 set -euo pipefail
 cd "$(dirname "$0")/../core"
