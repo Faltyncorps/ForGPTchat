@@ -29,8 +29,9 @@ protocol MetalRenderer: AnyObject {
     func encode(_ enc: MTLRenderCommandEncoder, viewport: SIMD2<Float>, scale: Float, time: Float) -> Bool
 }
 
-/// Nízkoúrovňový UIView s CAMetalLayer: vlastní smyčka CADisplayLink → drawable → command buffer.
-/// Běží jen když renderer chce další snímky (šetří baterii); `setNeedsRender()` vyžádá snímek.
+/// Nízkoúrovňový UIView s CAMetalLayer: CADisplayLink → drawable → command buffer.
+/// Triple buffering (semafor MaxFramesInFlight=3) + preferovaný 120 FPS na ProMotion.
+/// Běží jen když renderer chce další snímky; `setNeedsRender()` vyžádá snímek.
 final class MetalCanvasView: UIView {
     override class var layerClass: AnyClass { CAMetalLayer.self }
     private var metalLayer: CAMetalLayer { layer as! CAMetalLayer } // swiftlint:disable:this force_cast
@@ -38,6 +39,10 @@ final class MetalCanvasView: UIView {
     var clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
     private var link: CADisplayLink?
     private let t0 = CACurrentMediaTime()
+    /// CPU–GPU sync: max 3 command buffery najednou (Apple Triple Buffering).
+    private let inFlight = DispatchSemaphore(value: MetalFramePacing.maxFramesInFlight)
+    /// Znovupoužitý descriptor – žádná alokace MTLRenderPassDescriptor každý snímek.
+    private let reusedPass = MTLRenderPassDescriptor()
 
     init(renderer: MetalRenderer?) {
         self.renderer = renderer
@@ -46,6 +51,8 @@ final class MetalCanvasView: UIView {
         metalLayer.pixelFormat = .bgra8Unorm
         metalLayer.framebufferOnly = true
         metalLayer.isOpaque = false
+        // Až 3 drawables ve frontě (shodné s MaxFramesInFlight) – méně stallů na nextDrawable.
+        metalLayer.maximumDrawableCount = 3
         isOpaque = false
     }
     required init?(coder: NSCoder) { fatalError() }
@@ -62,22 +69,45 @@ final class MetalCanvasView: UIView {
     func setNeedsRender() {
         guard link == nil, window != nil, GPU.device != nil else { return }
         let l = CADisplayLink(target: WeakTarget(self), selector: #selector(WeakTarget.tick))
-        l.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 120, preferred: 60)
+        // ProMotion: maximumFramesPerSecond displeje (60/120); preferred = min(120, max).
+        let screenMax = window?.screen.maximumFramesPerSecond ?? UIScreen.main.maximumFramesPerSecond
+        let pref = min(MetalFramePacing.preferredFPS, max(screenMax, MetalFramePacing.minimumFPS))
+        if #available(iOS 15.0, *) {
+            l.preferredFrameRateRange = CAFrameRateRange(
+                minimum: Float(MetalFramePacing.minimumFPS),
+                maximum: Float(pref),
+                preferred: Float(pref))
+        } else {
+            l.preferredFramesPerSecond = pref
+        }
         l.add(to: .main, forMode: .common); link = l
     }
     private func stop() { link?.invalidate(); link = nil }
 
     fileprivate func frame() {
-        guard let renderer, metalLayer.drawableSize.width > 0, let drawable = metalLayer.nextDrawable(),
-              let cb = GPU.queue?.makeCommandBuffer() else { stop(); return }
-        let rp = MTLRenderPassDescriptor()
+        // Neblokuj hlavní vlákno na dlouho: pokud GPU nestíhá, přeskoč snímek (timeout 0).
+        if inFlight.wait(timeout: .now()) != .success { return }
+        guard let renderer, metalLayer.drawableSize.width > 0,
+              let drawable = metalLayer.nextDrawable(),
+              let cb = GPU.queue?.makeCommandBuffer() else {
+            inFlight.signal(); stop(); return
+        }
+        let rp = reusedPass
         rp.colorAttachments[0].texture = drawable.texture
-        rp.colorAttachments[0].loadAction = .clear; rp.colorAttachments[0].storeAction = .store
+        rp.colorAttachments[0].loadAction = .clear
+        rp.colorAttachments[0].storeAction = .store
         rp.colorAttachments[0].clearColor = clearColor
-        guard let enc = cb.makeRenderCommandEncoder(descriptor: rp) else { stop(); return }
+        guard let enc = cb.makeRenderCommandEncoder(descriptor: rp) else {
+            inFlight.signal(); stop(); return
+        }
         let vp = SIMD2<Float>(Float(bounds.width), Float(bounds.height))
-        let more = renderer.encode(enc, viewport: vp, scale: Float(metalLayer.contentsScale), time: Float(CACurrentMediaTime() - t0))
-        enc.endEncoding(); cb.present(drawable); cb.commit()
+        let more = renderer.encode(enc, viewport: vp, scale: Float(metalLayer.contentsScale),
+                                   time: Float(CACurrentMediaTime() - t0))
+        enc.endEncoding()
+        // presentDrawable:as soon as possible při cílovém FPS; semafor uvolní completedHandler.
+        cb.present(drawable)
+        cb.addCompletedHandler { [weak self] _ in self?.inFlight.signal() }
+        cb.commit()
         if !more || UIAccessibility.isReduceMotionEnabled { stop() }
     }
 
@@ -213,6 +243,9 @@ final class ChartRenderer: MetalRenderer {
     private var fromM = matrix_identity_float4x4, toM = matrix_identity_float4x4
     private var start: CFTimeInterval = 0
     private let duration: CFTimeInterval = 0.6
+    /// Scratch buffery – předejdou alokaci pole každý snímek (FPS).
+    private var stripScratch: [SIMD2<Float>] = []
+    private var lineScratch: [SIMD2<Float>] = []
 
     func setSeries(_ values: [Float]) {
         #if RUST_CORE
@@ -270,21 +303,29 @@ final class ChartRenderer: MetalRenderer {
         #endif
         guard let fill, let line, !to.isEmpty else { return false }
         let pts = current(), m = currentMatrix(), base = ChartMath.unfit(m).y
-        var strip: [SIMD2<Float>] = []; strip.reserveCapacity(pts.count * 2)
-        for p in pts { strip.append(p); strip.append(SIMD2(p.x, base)) }      // výplň: křivka/základna
+        // Znovupoužitý scratch – žádný nový heap alloc při stabilním počtu bodů.
+        let needStrip = pts.count * 2
+        if stripScratch.count != needStrip { stripScratch = [SIMD2<Float>](repeating: .zero, count: needStrip) }
+        for i in pts.indices {
+            let p = pts[i]
+            stripScratch[i * 2] = p
+            stripScratch[i * 2 + 1] = SIMD2(p.x, base)
+        }
         let tint = SIMD4<Float>(0.2, 0.55, 1.0, 1)
         var u = ChartUniforms(transform: m, lineColor: tint, fillTop: SIMD4(tint.x, tint.y, tint.z, 0.35),
                               fillBottom: SIMD4(tint.x, tint.y, tint.z, 0), progress: ChartMath.easeOutCubic(t()))
-        // ≤ 4 KB → setVertexBytes (bez alokace MTLBuffer každý snímek)
+        // ≤ 4 KB → setVertexBytes (bez alokace MTLBuffer každý snímek); větší → triple-buffer ring.
         enc.setRenderPipelineState(fill)
-        enc.setVertexBytes(&strip, length: MemoryLayout<SIMD2<Float>>.stride * strip.count, index: 0)
+        enc.setVertexBytes(&stripScratch, length: MemoryLayout<SIMD2<Float>>.stride * stripScratch.count, index: 0)
         enc.setVertexBytes(&u, length: MemoryLayout<ChartUniforms>.stride, index: 1)
         enc.setFragmentBytes(&u, length: MemoryLayout<ChartUniforms>.stride, index: 1)
-        enc.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: strip.count)
-        var lp = pts
+        enc.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: stripScratch.count)
+        if lineScratch.count != pts.count { lineScratch = pts } else {
+            for i in pts.indices { lineScratch[i] = pts[i] }
+        }
         enc.setRenderPipelineState(line)
-        enc.setVertexBytes(&lp, length: MemoryLayout<SIMD2<Float>>.stride * lp.count, index: 0)
-        enc.drawPrimitives(type: .lineStrip, vertexStart: 0, vertexCount: lp.count)
+        enc.setVertexBytes(&lineScratch, length: MemoryLayout<SIMD2<Float>>.stride * lineScratch.count, index: 0)
+        enc.drawPrimitives(type: .lineStrip, vertexStart: 0, vertexCount: lineScratch.count)
         return t() < 1
     }
 }
