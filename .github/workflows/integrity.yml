@@ -32,6 +32,8 @@ jobs:
         run: |
           awk '{ if (length($1) != 128) exit 1 }' integrity/MANIFEST.sha512
           ! grep -vE '^\s*(#|$)' integrity/allowed_signers | grep -vE ' (ssh-ed25519|sk-ssh-ed25519@openssh\.com) '
+      - name: Home-defense toolkit tests (bash, offline fixtures)
+        run: tools/home-defense/tests/run.sh
       - name: Web OIDC client tests (node:test)
         run: node --test web/tests/*.test.js
       - name: Verify owner signature (fails until owner adds key to integrity/allowed_signers) – last so other checks still run)
