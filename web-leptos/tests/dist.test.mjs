@@ -45,3 +45,19 @@ test('service worker: verze = hash wasm, necachuje cizí originy ani /passkey/',
   assert.match(sw, /\/passkey\//);
   for (const f of ['./elfall-web.js', './elfall-web_bg.wasm', './style.css']) assert.ok(sw.includes(`'${f}'`), f);
 });
+test('vlastní pin: zavaděč ověřuje SHA-384 wasm a předává init() bajty, ne URL', () => {
+  const inline = html.match(/<script type="module">([\s\S]*?)<\/script>/)[1];
+  assert.strictEqual(inline.match(/WASM_SHA384 = '([^']+)'/)[1], sha384(wasm));
+  assert.match(inline, /crypto\.subtle\.digest\('SHA-384', bytes\)/);
+  assert.match(inline, /init\(\{ module_or_path: bytes \}\)/);
+  assert.match(inline, /throw new Error\('wasm pin'\)/);
+  assert.doesNotMatch(inline, /window\.wasmBindings/, 'exporty se nevystavují do window');
+});
+test('vlastní pin: změněný wasm zavaděč odmítne (simulace)', async () => {
+  const inline = html.match(/<script type="module">([\s\S]*?)<\/script>/)[1];
+  const pin = inline.match(/WASM_SHA384 = '([^']+)'/)[1];
+  const tampered = Buffer.from(wasm); tampered[tampered.length - 1] ^= 1;
+  const digest = (b) => createHash('sha384').update(b).digest('base64');
+  assert.strictEqual(digest(wasm), pin);
+  assert.notStrictEqual(digest(tampered), pin);
+});

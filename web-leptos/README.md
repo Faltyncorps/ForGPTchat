@@ -21,6 +21,7 @@ Nástroje: Rust 1.90.0, Trunk 0.21.14, wasm-bindgen 0.2.129 (připnuto v Cargo.t
   `connect-src 'self' https://mempool.space` (self = backend `/passkey/*`), `frame-ancestors 'none'`, bez
   `unsafe-inline` / `unsafe-eval`. Hash počítá Trunk hook `scripts/web-leptos-csp.sh` po každém buildu a zapíše
   ho do `<meta>` (bez frame-ancestors – meta ho neumí), `_headers` a `nginx-csp.conf` (`deploy/web-leptos/`).
+- **Vlastní pin wasm:** Trunk hook nahradí inline init zavaděčem, který wasm stáhne, ověří SHA-384 proti pinu z buildu a předá `init()` až ověřené bajty (fail-closed). Je to navíc k SRI.
 - **SRI:** Trunk přidá `integrity="sha384-…"` na modulepreload glue JS, preload wasm a CSS (testováno).
 - **`strip = true` / `opt-level = "z"` nejsou bezpečnostní opatření** – jen zmenšují binárku. Wasm je veřejný
   a lze ho dekompilovat; nesmí obsahovat žádné tajemství ani „skrytou“ logiku.

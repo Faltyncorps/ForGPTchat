@@ -8,6 +8,18 @@ python3 - "$D" "$API" <<'PY'
 import base64, hashlib, re, sys, pathlib
 d, api = pathlib.Path(sys.argv[1]), sys.argv[2]
 html = (d / "index.html").read_text()
+# Vlastní pin: inline init od Trunku nahradíme zavaděčem, který stáhne wasm, ověří SHA-384 (navíc k SRI na preload)
+# a teprve pak předá BAJTY do wasm-bindgen init() – prohlížeč tak nikdy nespustí neověřený modul. Fail-closed.
+wasm = next(d.glob("*_bg.wasm")); glue = next(p for p in d.glob("*.js") if p.name not in ("sw.js",))
+pin = base64.b64encode(hashlib.sha384(wasm.read_bytes()).digest()).decode()
+loader = (f"\nimport init from '/{glue.name}';\n"
+          f"const WASM_SHA384 = '{pin}';\n"
+          f"const bytes = await (await fetch('/{wasm.name}', {{ integrity: 'sha384-' + WASM_SHA384 }})).arrayBuffer();\n"
+          "const got = btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.digest('SHA-384', bytes))));\n"
+          "if (got !== WASM_SHA384) { document.body.textContent = 'Integrita aplikace nesouhlasí – nepoužívejte ji.'; throw new Error('wasm pin'); }\n"
+          "await init({ module_or_path: bytes });\n")
+html, n = re.subn(r'(<script type="module">)(.*?)(</script>)', lambda m: m.group(1) + loader + m.group(3), html, count=1, flags=re.S)
+if n != 1: sys.exit("Trunk inline zavaděč nenalezen")
 inline = re.findall(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", html, re.S)
 hashes = " ".join(f"'sha384-{base64.b64encode(hashlib.sha384(s.encode()).digest()).decode()}'" for s in inline)
 csp = ("default-src 'none'; "
@@ -28,7 +40,6 @@ hdr = ["/*", f"  Content-Security-Policy: {csp}",
        "  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()",
        "  Cross-Origin-Opener-Policy: same-origin", "  Cross-Origin-Resource-Policy: same-origin"]
 (d / "_headers").write_text("\n".join(hdr) + "\n")
-wasm = next(d.glob("*_bg.wasm"))
 tag = hashlib.sha256(wasm.read_bytes()).hexdigest()[:12]
 sw = d / "sw.js"; sw.write_text(sw.read_text().replace("__WASM_TAG__", tag))
 print("CSP:", csp)
