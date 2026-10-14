@@ -22,18 +22,15 @@ final class SodiumVault {
 
     func seal(field: String, _ plaintext: String) -> String? {
         guard let k = dataKey(),
-              let r = sodium.aead.xchacha20poly1305ietf.encrypt(message: Bytes(plaintext.utf8), secretKey: k, additionalData: Bytes("elfall/v1/\(field)".utf8))
+              let r: Bytes = sodium.aead.xchacha20poly1305ietf.encrypt(message: Bytes(plaintext.utf8), secretKey: k, additionalData: Bytes("elfall/v1/\(field)".utf8))
         else { return nil }
-        return prefix + Data(r.nonce + r.authenticatedCipherText).base64EncodedString()
+        return prefix + Data(r).base64EncodedString()  // nonce || ciphertext+tag
     }
 
     /// nil = data změněna, podvržena nebo patří jinému poli.
     func open(field: String, _ sealed: String) -> String? {
         guard sealed.hasPrefix(prefix), let k = dataKey(), let raw = Data(base64Encoded: String(sealed.dropFirst(prefix.count))) else { return nil }
-        let nl = sodium.aead.xchacha20poly1305ietf.NonceBytes
-        guard raw.count > nl else { return nil }
-        let b = Bytes(raw)
-        guard let m = sodium.aead.xchacha20poly1305ietf.decrypt(authenticatedCipherText: Array(b[nl...]), secretKey: k, nonce: Array(b[..<nl]),
+        guard let m = sodium.aead.xchacha20poly1305ietf.decrypt(nonceAndAuthenticatedCipherText: Bytes(raw), secretKey: k,
                                                                  additionalData: Bytes("elfall/v1/\(field)".utf8)) else { return nil }
         return String(bytes: m, encoding: .utf8)
     }
