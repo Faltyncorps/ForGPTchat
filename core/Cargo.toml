@@ -21,6 +21,8 @@ getrandom = "0.2"
 zeroize = "1.8.2"
 uniffi = { version = "=0.29.4", optional = true }
 wasm-bindgen = { version = "0.2.128", optional = true }
+bech32 = "0.11"
+bs58 = { version = "0.5", features = ["check"] }
 
 # Nativní cíle (host, Android, iOS): veškerá kryptografie z libsodium.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

@@ -17,23 +17,20 @@ function go(view) {
 }
 document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => go(b.dataset.go)));
 
-// --- Address helpers (mirror of shared/Bip21 + basic network check) ---
+// --- Address helpers: logika je v Rust/Wasm (core/src/validate.rs, web/wasm/), JS jen deleguje ---
+const core = () => globalThis.ElfallCore;
 function parsePayment(raw) {
-  raw = raw.trim();
-  if (/^bitcoin:/i.test(raw)) {
-    const [addr, q] = raw.slice(8).split('?');
-    const p = new URLSearchParams(q || '');
-    return { address: addr, amount: p.get('amount') };
-  }
-  return { address: raw, amount: null };
+  const c = core();
+  if (!c) return { address: String(raw).trim(), amount: null };
+  const p = c.parsePayment(raw);
+  const r = { address: p.address, amount: p.amountSats == null ? null : c.formatSats(p.amountSats) };
+  if (p.free) p.free();
+  return r;
 }
-function checkAddress(a) {
-  if (!a) return 'Zadejte adresu';
-  if (/^(bc1|[13])/i.test(a)) return 'To je mainnet adresa – Eleanor podepisuje jen na testnetu';
-  if (!/^(tb1[02-9ac-hj-np-z]{8,87}|[mn2][1-9A-HJ-NP-Za-km-z]{25,34})$/i.test(a)) return 'Neplatný formát testnet adresy';
-  return null;
-}
-const fmt = (sats) => (sats / 1e8).toFixed(8);
+// fail-closed: bez Wasm modulu žádnou adresu neoznačíme za platnou
+function checkAddress(a) { const c = core(); return c ? (c.checkAddress(a) ?? null) : 'Ověřovací modul (Wasm) se načítá…'; }
+addEventListener('elfall-core-ready', () => { if ($('dest') && $('dest').value) updateTransfer(); });
+const fmt = (sats) => (core() && Number.isSafeInteger(sats) && sats >= 0 ? core().formatSats(sats) : (sats / 1e8).toFixed(8));
 async function j(url) { const r = await fetch(url); if (!r.ok) throw new Error(r.status); return r.json(); }
 
 // --- Receive ---

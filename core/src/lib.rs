@@ -4,6 +4,7 @@
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 pub mod framing;
+pub mod validate;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod pin;
 #[cfg(not(target_arch = "wasm32"))]

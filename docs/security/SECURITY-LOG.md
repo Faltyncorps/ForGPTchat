@@ -22,3 +22,4 @@
 | 2026-10-14 | Formální důkaz | Idris2: invarianty FLC (pevný strop nabídky, zmrazený yFLC nepřevoditelný) – model, CI (`proofs/idris/`) | hotovo (security-review) |
 | 2026-10-14 | Autentizace | WebAuthn passkeys: backend webauthn4j (ES256/EdDSA, UV required, jednorázové challenge) + web klient, testy; úložiště zatím v paměti | rozpracováno (security-review) |
 | 2026-10-14 | Plán | `ZERO-TRUST-ROADMAP.md`: passkeys → ZTNA → Rust jádro (UniFFI/Wasm) → Suricata/Zeek, Cilium/eBPF → HACL*/F* | platí |
+| 2026-10-14 | Změna | iOS: UIKit + přímé Metal API (CAMetalLayer, vlastní pipeline, CADisplayLink, MSL shadery, simd grafy/přechody) místo SwiftUI; Rust jádro za RUST_CORE (výchozí vypnuto). Web: validace/rámování/ověření v Rust/Wasm, JS jen zavaděč s SHA-384 pinem, CSP wasm-unsafe-eval (větev ios-uikit-core) | čeká na schválení |
