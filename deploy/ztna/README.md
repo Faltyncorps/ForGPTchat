@@ -7,3 +7,8 @@
   `secretstream`, připnutý statický kx klíč backendu, `binding = BLAKE2b-256("ELFALL-CH-v1\0"‖client_pk‖server_pk)`
   je AD každé zprávy a výzva k podpisu klíčem Secure Enclave. První zpráva = krátkodobý device-bound token;
   backend ověří exp, `cnf` (otisk SE klíče) a ES256 podpis `binding`. Serverová implementace v backendu zatím chybí.
+
+## Serverové konfigurace (jen server)
+- `cilium-policy.yaml` – CiliumNetworkPolicy (eBPF, L7 allowlist pro `/passkey/*` a GET), poznámka k XDP.
+- `suricata-elfall.rules` – lokální pravidla Suricata IDS (rate passkey options, traversal, seed v URI, staré TLS).
+- Neověřeno proti běžícímu clusteru/Suricatě (box nemá k8s ani Suricatu).

@@ -1,0 +1,6 @@
+# Suricata (IDS na serverové straně, ne v klientech). Doplněk k Cilium/eBPF politice.
+# Načíst: suricata.yaml -> rule-files: [ elfall.rules ]. SID rozsah 9100000+ (lokální).
+alert http any any -> $HOME_NET any (msg:"ELFALL passkey: nadměrné /passkey/login/options"; flow:to_server,established; http.uri; content:"/passkey/login/options"; threshold:type both, track by_src, count 30, seconds 60; classtype:attempted-recon; sid:9100001; rev:1;)
+alert http any any -> $HOME_NET any (msg:"ELFALL: pokus o path traversal"; flow:to_server,established; http.uri; content:".."; classtype:web-application-attack; sid:9100002; rev:1;)
+alert http any any -> $HOME_NET any (msg:"ELFALL: požadavek na seed/privátní klíč v URI"; flow:to_server,established; http.uri; pcre:"/(seed|mnemonic|private[_-]?key)=/i"; classtype:policy-violation; sid:9100003; rev:1;)
+alert tls any any -> $HOME_NET 443 (msg:"ELFALL: TLS < 1.2"; flow:to_server,established; tls.version:1.0; classtype:protocol-command-decode; sid:9100004; rev:1;)

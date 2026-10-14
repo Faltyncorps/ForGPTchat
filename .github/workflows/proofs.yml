@@ -1,4 +1,4 @@
-name: Formal proofs (EasyCrypt, SPARK, Idris2)
+name: Formal proofs (EasyCrypt, SPARK, Idris2, Rocq)
 
 on:
   push:
@@ -72,3 +72,16 @@ jobs:
       - name: Check FLC invariants
         working-directory: proofs/idris
         run: idris2 --check FLC.idr
+
+  rocq:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions: { contents: read }
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: { persist-credentials: false }
+      - name: Coq 8.20 (Ubuntu) a kontrola důkazů
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q coq
+          cd proofs/rocq && coqc Framing.v && ! grep -nE "Admitted|admit\." Framing.v
+
