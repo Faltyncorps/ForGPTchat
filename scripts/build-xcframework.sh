@@ -12,7 +12,8 @@ cargo build --locked --features bindgen
 rm -rf build/gen build/ElfallCore.xcframework && mkdir -p build/gen/headers
 ./target/debug/uniffi-bindgen generate --library target/debug/libelfall_core.dylib --language swift --no-format --out-dir build/gen
 cp build/gen/elfall_coreFFI.h build/gen/headers/
-cp build/gen/elfall_coreFFI.modulemap build/gen/headers/module.modulemap
+cp include/elfall_gpu.h build/gen/headers/   # ruční C ABI zero-copy bufferů (gpu.rs)
+sed 's/header "elfall_coreFFI.h"/header "elfall_coreFFI.h"\n    header "elfall_gpu.h"/' build/gen/elfall_coreFFI.modulemap > build/gen/headers/module.modulemap
 xcodebuild -create-xcframework \
   -library target/aarch64-apple-ios/release/libelfall_core.a -headers build/gen/headers \
   -library target/aarch64-apple-ios-sim/release/libelfall_core.a -headers build/gen/headers \

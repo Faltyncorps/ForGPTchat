@@ -103,3 +103,115 @@ pub fn pwhash_str_needs_rehash(h: &str, ops: u64, mem_bytes: usize) -> i32 {
     let Some(c) = cstr(h) else { return -1 };
     unsafe { s::crypto_pwhash_str_needs_rehash(c.as_ptr(), ops, mem_bytes) }
 }
+
+pub fn memzero(buf: &mut [u8]) {
+    unsafe { s::sodium_memzero(buf.as_mut_ptr().cast(), buf.len()) };
+}
+
+// ---- BLAKE2b (crypto_generichash) ----
+pub fn generichash32(parts: &[&[u8]]) -> Result<[u8; 32], CoreError> {
+    init()?;
+    let mut st = std::mem::MaybeUninit::<s::crypto_generichash_state>::uninit();
+    let mut out = [0u8; 32];
+    unsafe {
+        if s::crypto_generichash_init(st.as_mut_ptr(), std::ptr::null(), 0, 32) != 0 { return Err(CoreError::Hash); }
+        for p in parts {
+            if s::crypto_generichash_update(st.as_mut_ptr(), p.as_ptr(), p.len() as u64) != 0 { return Err(CoreError::Hash); }
+        }
+        if s::crypto_generichash_final(st.as_mut_ptr(), out.as_mut_ptr(), 32) != 0 { return Err(CoreError::Hash); }
+    }
+    Ok(out)
+}
+
+// ---- X25519 výměna klíčů (crypto_kx) ----
+pub const KX_PK: usize = s::crypto_kx_PUBLICKEYBYTES as usize;
+pub const KX_SK: usize = s::crypto_kx_SECRETKEYBYTES as usize;
+pub const KX_SESSION: usize = s::crypto_kx_SESSIONKEYBYTES as usize;
+pub type SessionKey = zeroize::Zeroizing<[u8; KX_SESSION]>;
+
+pub fn kx_keypair() -> Result<([u8; KX_PK], zeroize::Zeroizing<[u8; KX_SK]>), CoreError> {
+    init()?;
+    let mut pk = [0u8; KX_PK];
+    let mut sk = zeroize::Zeroizing::new([0u8; KX_SK]);
+    if unsafe { s::crypto_kx_keypair(pk.as_mut_ptr(), sk.as_mut_ptr()) } != 0 { return Err(CoreError::Rng); }
+    Ok((pk, sk))
+}
+
+/// Veřejný klíč z tajného (crypto_scalarmult_base) – pro obnovu páru serveru.
+pub fn kx_public(sk: &[u8; KX_SK]) -> Result<[u8; KX_PK], CoreError> {
+    init()?;
+    let mut pk = [0u8; KX_PK];
+    if unsafe { s::crypto_scalarmult_base(pk.as_mut_ptr(), sk.as_ptr()) } != 0 { return Err(CoreError::InvalidKey); }
+    Ok(pk)
+}
+
+/// (rx, tx). Libsodium odmítne slabé (low-order) veřejné klíče peeru -> InvalidKey.
+pub fn kx_session(client: bool, pk: &[u8; KX_PK], sk: &[u8; KX_SK], peer: &[u8; KX_PK]) -> Result<(SessionKey, SessionKey), CoreError> {
+    init()?;
+    let mut rx = zeroize::Zeroizing::new([0u8; KX_SESSION]);
+    let mut tx = zeroize::Zeroizing::new([0u8; KX_SESSION]);
+    let r = unsafe {
+        if client { s::crypto_kx_client_session_keys(rx.as_mut_ptr(), tx.as_mut_ptr(), pk.as_ptr(), sk.as_ptr(), peer.as_ptr()) }
+        else { s::crypto_kx_server_session_keys(rx.as_mut_ptr(), tx.as_mut_ptr(), pk.as_ptr(), sk.as_ptr(), peer.as_ptr()) }
+    };
+    if r != 0 { return Err(CoreError::InvalidKey); }
+    Ok((rx, tx))
+}
+
+// ---- XChaCha20-Poly1305 secretstream ----
+pub const SS_HEADER: usize = s::crypto_secretstream_xchacha20poly1305_HEADERBYTES as usize;
+pub const SS_ABYTES: usize = s::crypto_secretstream_xchacha20poly1305_ABYTES as usize;
+pub const SS_TAG_MESSAGE: u8 = s::crypto_secretstream_xchacha20poly1305_TAG_MESSAGE as u8;
+pub const SS_TAG_FINAL: u8 = s::crypto_secretstream_xchacha20poly1305_TAG_FINAL as u8;
+
+/// Stav proudu; při zahození se nuluje (obsahuje odvozený klíč).
+pub struct StreamState(Box<s::crypto_secretstream_xchacha20poly1305_state>);
+
+impl Drop for StreamState {
+    fn drop(&mut self) {
+        let p: *mut s::crypto_secretstream_xchacha20poly1305_state = &mut *self.0;
+        unsafe { s::sodium_memzero(p.cast(), std::mem::size_of::<s::crypto_secretstream_xchacha20poly1305_state>()) };
+    }
+}
+
+fn zero_state() -> Box<s::crypto_secretstream_xchacha20poly1305_state> {
+    // POD struktura z bindgenu – nulová hodnota je platná (init_* ji přepíše)
+    Box::new(unsafe { std::mem::zeroed() })
+}
+
+pub fn ss_init_push(key: &[u8; KX_SESSION]) -> Result<(StreamState, [u8; SS_HEADER]), CoreError> {
+    init()?;
+    let mut st = StreamState(zero_state());
+    let mut h = [0u8; SS_HEADER];
+    if unsafe { s::crypto_secretstream_xchacha20poly1305_init_push(&mut *st.0, h.as_mut_ptr(), key.as_ptr()) } != 0 { return Err(CoreError::InvalidKey); }
+    Ok((st, h))
+}
+
+pub fn ss_init_pull(key: &[u8; KX_SESSION], header: &[u8; SS_HEADER]) -> Result<StreamState, CoreError> {
+    init()?;
+    let mut st = StreamState(zero_state());
+    if unsafe { s::crypto_secretstream_xchacha20poly1305_init_pull(&mut *st.0, header.as_ptr(), key.as_ptr()) } != 0 { return Err(CoreError::BadFrame); }
+    Ok(st)
+}
+
+pub fn ss_push(st: &mut StreamState, m: &[u8], ad: &[u8], tag: u8) -> Result<Vec<u8>, CoreError> {
+    let mut c = vec![0u8; m.len() + SS_ABYTES];
+    let mut clen: u64 = 0;
+    let r = unsafe {
+        s::crypto_secretstream_xchacha20poly1305_push(&mut *st.0, c.as_mut_ptr(), &mut clen, m.as_ptr(), m.len() as u64, ad.as_ptr(), ad.len() as u64, tag)
+    };
+    if r != 0 || clen as usize != c.len() { return Err(CoreError::MessageTooLong); }
+    Ok(c)
+}
+
+pub fn ss_pull(st: &mut StreamState, c: &[u8], ad: &[u8]) -> Result<(zeroize::Zeroizing<Vec<u8>>, u8), CoreError> {
+    if c.len() < SS_ABYTES { return Err(CoreError::AuthFailed); }
+    let mut m = zeroize::Zeroizing::new(vec![0u8; c.len() - SS_ABYTES]);
+    let mut mlen: u64 = 0;
+    let mut tag: u8 = 0;
+    let r = unsafe {
+        s::crypto_secretstream_xchacha20poly1305_pull(&mut *st.0, m.as_mut_ptr(), &mut mlen, &mut tag, c.as_ptr(), c.len() as u64, ad.as_ptr(), ad.len() as u64)
+    };
+    if r != 0 || mlen as usize != m.len() { return Err(CoreError::AuthFailed); }
+    Ok((m, tag))
+}
