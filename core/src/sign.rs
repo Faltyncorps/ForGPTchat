@@ -1,32 +1,31 @@
-//! Ed25519 (ed25519-dalek, strict verify) – podepisuje se vždy jen orámovaný vstup.
-use crate::{framing, CoreError};
-use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
+//! Ed25519 přes libsodium `crypto_sign` – podepisuje se vždy jen orámovaný vstup.
+use crate::{framing, sodium, CoreError};
 use zeroize::Zeroizing;
 
+/// 32B seed (RFC 8032 „secret key“).
 pub fn generate_secret() -> Result<Zeroizing<[u8; 32]>, CoreError> {
     let mut s = Zeroizing::new([0u8; 32]);
-    getrandom::getrandom(&mut s[..]).map_err(|_| CoreError::Rng)?;
+    sodium::random(&mut s[..])?;
     Ok(s)
 }
 
+fn seed(secret: &[u8]) -> Result<Zeroizing<[u8; 32]>, CoreError> {
+    Ok(Zeroizing::new(secret.try_into().map_err(|_| CoreError::InvalidLength)?))
+}
+
 pub fn public_key(secret: &[u8]) -> Result<[u8; 32], CoreError> {
-    Ok(key(secret)?.verifying_key().to_bytes())
+    Ok(sodium::sign_seed_keypair(&*seed(secret)?)?.0)
 }
 
 pub fn sign_framed(secret: &[u8], msg: &[u8]) -> Result<[u8; 64], CoreError> {
     let framed = framing::frame(msg)?;
-    Ok(key(secret)?.sign(&framed).to_bytes())
+    let (_, sk) = sodium::sign_seed_keypair(&*seed(secret)?)?;
+    sodium::sign_detached(&sk, &framed)
 }
 
 pub fn verify_framed(public: &[u8], msg: &[u8], sig: &[u8]) -> Result<bool, CoreError> {
     let pk: [u8; 32] = public.try_into().map_err(|_| CoreError::InvalidLength)?;
     let sig: [u8; 64] = sig.try_into().map_err(|_| CoreError::InvalidLength)?;
-    let vk = VerifyingKey::from_bytes(&pk).map_err(|_| CoreError::InvalidKey)?;
     let framed = framing::frame(msg)?;
-    Ok(vk.verify_strict(&framed, &Signature::from_bytes(&sig)).is_ok())
-}
-
-fn key(secret: &[u8]) -> Result<SigningKey, CoreError> {
-    let s: Zeroizing<[u8; 32]> = Zeroizing::new(secret.try_into().map_err(|_| CoreError::InvalidLength)?);
-    Ok(SigningKey::from_bytes(&s)) // SigningKey se při dropu nuluje (feature zeroize)
+    sodium::verify_detached(&pk, &framed, &sig)
 }

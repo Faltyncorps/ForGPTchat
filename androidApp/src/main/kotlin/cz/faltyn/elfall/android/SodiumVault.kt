@@ -15,10 +15,10 @@ interface KeyWrapper {
     fun unwrap(wrapped: ByteArray): ByteArray
 }
 
-class SodiumVault(private val ls: LazySodium, private val dataKey: ByteArray) {
+class SodiumVault(private val ls: LazySodium, private val dataKey: ByteArray) : LocalVault {
     init { require(dataKey.size == AEAD.XCHACHA20POLY1305_IETF_KEYBYTES) { "klíč musí mít 32 B" } }
 
-    fun seal(field: String, plaintext: String): String {
+    override fun seal(field: String, plaintext: String): String {
         val nonce = ls.randomBytesBuf(AEAD.XCHACHA20POLY1305_IETF_NPUBBYTES)
         val m = plaintext.encodeToByteArray(); val ad = ad(field)
         val c = ByteArray(m.size + AEAD.XCHACHA20POLY1305_IETF_ABYTES)
@@ -28,7 +28,7 @@ class SodiumVault(private val ls: LazySodium, private val dataKey: ByteArray) {
     }
 
     /** Vrací null, pokud data byla změněna/podvržena nebo patří jinému poli. */
-    fun open(field: String, sealed: String): String? {
+    override fun open(field: String, sealed: String): String? {
         if (!sealed.startsWith(PREFIX)) return null
         val raw = runCatching { B64D.decode(sealed.removePrefix(PREFIX)) }.getOrNull() ?: return null
         val n = AEAD.XCHACHA20POLY1305_IETF_NPUBBYTES

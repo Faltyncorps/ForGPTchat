@@ -4,6 +4,18 @@ plugins {
     kotlin("plugin.compose")
 }
 
+val rustCore = (findProperty("elfall.rustCore") as String?)?.toBoolean() ?: false
+val coreDir = rootProject.layout.projectDirectory.dir("core")
+
+// cargo-ndk: libelfall_core.so pro arm64-v8a, armeabi-v7a, x86_64 → src/main/jniLibs (jen s příznakem)
+val cargoNdk by tasks.registering(Exec::class) {
+    onlyIf { rustCore }
+    workingDir = coreDir.asFile
+    commandLine("cargo", "ndk", "-t", "arm64-v8a", "-t", "armeabi-v7a", "-t", "x86_64", "--platform", "26",
+        "-o", layout.projectDirectory.dir("src/main/jniLibs").asFile.absolutePath, "build", "--release", "--locked", "--features", "ffi")
+}
+tasks.matching { it.name.startsWith("merge") && it.name.endsWith("JniLibFolders") }.configureEach { dependsOn(cargoNdk) }
+
 android {
     namespace = "cz.faltyn.elfall.android"
     compileSdk = 35
@@ -17,6 +29,8 @@ android {
     }
 
     buildFeatures { compose = true; buildConfig = true }
+    // Rust jádro (core/) – výchozí VYPNUTO. Zapnout: ./gradlew -Pelfall.rustCore=true … (vyžaduje NDK + cargo-ndk)
+    defaultConfig { buildConfigField("boolean", "RUST_CORE", rustCore.toString()) }
 
     flavorDimensions += listOf("app", "network")
     productFlavors {
@@ -86,7 +100,13 @@ dependencies {
     implementation("com.goterl:lazysodium-android:5.1.0@aar") { isTransitive = false }
     implementation("net.java.dev.jna:jna:5.13.0@aar")
     testImplementation("com.goterl:lazysodium-java:5.1.4")
+    testImplementation("net.java.dev.jna:jna:5.13.0") // UniFFI testy proti hostitelské libelfall_core
     testImplementation(kotlin("test-junit"))
 }
 
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
+
+// JVM testy Rust jádra: hostitelská knihovna z core/target/release (cargo build --release --features ffi)
+tasks.withType<Test>().configureEach {
+    systemProperty("jna.library.path", coreDir.dir("target/release").asFile.absolutePath)
+}
