@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Reprodukovatelné sestavení web/wasm/ z core/ (Rust 1.90.0, wasm-bindgen-cli 0.2.129).
+# Reprodukovatelné sestavení web/wasm/ z core/ (Rust 1.99.0, wasm-bindgen-cli 0.2.129).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 (cd core && cargo build --locked --release --target wasm32-unknown-unknown --features wasm)
