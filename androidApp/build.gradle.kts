@@ -5,6 +5,8 @@ plugins {
 }
 
 val rustCore = (findProperty("elfall.rustCore") as String?)?.toBoolean() ?: false
+// StrongBox povinně (bez fallbacku na TEE): -Pelfall.strongBoxRequired=true, výchozí false
+val strongBoxRequired = (findProperty("elfall.strongBoxRequired") as String?)?.toBoolean() ?: false
 val coreDir = rootProject.layout.projectDirectory.dir("core")
 
 // cargo-ndk: libelfall_core.so pro arm64-v8a, armeabi-v7a, x86_64 → src/main/jniLibs (jen s příznakem)
@@ -30,7 +32,10 @@ android {
 
     buildFeatures { compose = true; buildConfig = true }
     // Rust jádro (core/) – výchozí VYPNUTO. Zapnout: ./gradlew -Pelfall.rustCore=true … (vyžaduje NDK + cargo-ndk)
-    defaultConfig { buildConfigField("boolean", "RUST_CORE", rustCore.toString()) }
+    defaultConfig {
+        buildConfigField("boolean", "RUST_CORE", rustCore.toString())
+        buildConfigField("boolean", "STRONGBOX_REQUIRED", strongBoxRequired.toString())
+    }
 
     flavorDimensions += listOf("app", "network")
     productFlavors {
