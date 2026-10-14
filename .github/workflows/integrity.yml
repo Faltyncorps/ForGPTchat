@@ -21,8 +21,6 @@ jobs:
         with: { python-version: "3.12" }
       - name: Verify manifest hashes and pinned constants
         run: python3 scripts/integrity_manifest.py verify --no-signature
-      - name: Verify owner signature (fails until owner adds key to integrity/allowed_signers)
-        run: python3 scripts/integrity_manifest.py verify
       - name: Gradle wrapper pinned (distributionSha256Sum + dependency verification on)
         run: |
           grep -Eq '^distributionSha256Sum=[0-9a-f]{64}$' gradle/wrapper/gradle-wrapper.properties
@@ -36,3 +34,5 @@ jobs:
           ! grep -vE '^\s*(#|$)' integrity/allowed_signers | grep -vE ' (ssh-ed25519|sk-ssh-ed25519@openssh\.com) '
       - name: Web OIDC client tests (node:test)
         run: node --test web/tests/
+      - name: Verify owner signature (fails until owner adds key to integrity/allowed_signers) – last so other checks still run)
+        run: python3 scripts/integrity_manifest.py verify
