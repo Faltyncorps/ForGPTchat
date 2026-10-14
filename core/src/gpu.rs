@@ -22,10 +22,15 @@ pub const MAX_POINTS: usize = 4096;
 /// Min. stránka: iOS/arm64 má 16 KiB; větší hodnota je vždy násobkem 4 KiB.
 const MIN_PAGE: usize = 16 * 1024;
 
+#[cfg(not(miri))]
 extern "C" {
     fn getpagesize() -> std::os::raw::c_int;
 }
 
+#[cfg(miri)]
+pub fn page_size() -> usize { MIN_PAGE } // Miri: bez FFI
+
+#[cfg(not(miri))]
 pub fn page_size() -> usize {
     // SAFETY: getpagesize nemá vstupy ani vedlejší účinky (POSIX, Linux i Darwin).
     let p = unsafe { getpagesize() };
@@ -86,11 +91,16 @@ fn free_raw(ptr: *mut u8, cap: usize) -> Result<(), CoreError> {
     // SAFETY: (ptr, cap) byl v registru → pochází z `PageBuffer::new` s Layout(cap, page) a ještě nebyl uvolněn;
     // z registru je odstraněn před dealloc, takže dvojí uvolnění není možné.
     unsafe {
-        crate::sodium::memzero(std::slice::from_raw_parts_mut(ptr, cap));
+        wipe(std::slice::from_raw_parts_mut(ptr, cap));
         dealloc(ptr, Layout::from_size_align_unchecked(cap, page));
     }
     Ok(())
 }
+
+#[cfg(not(miri))]
+fn wipe(b: &mut [u8]) { crate::sodium::memzero(b) }
+#[cfg(miri)]
+fn wipe(b: &mut [u8]) { zeroize::Zeroize::zeroize(b) } // Miri neumí FFI do libsodium
 
 pub fn live_allocations() -> usize { LIVE.lock().map(|l| l.len()).unwrap_or(usize::MAX) }
 

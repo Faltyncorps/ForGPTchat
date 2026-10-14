@@ -1,5 +1,7 @@
 # ELFALL — Bitcoin wallet + card cash-out (2-in-1)
 
+**Verze:** 1.0.0-rc1 (release candidate, neveřejný; postup viz [docs/RELEASE-CHECKLIST.md](docs/RELEASE-CHECKLIST.md))
+
 **CZ:** ELFALL (Eleanor + Fallcoin) je neúschovná Bitcoin peněženka pro Android a iOS s režimy Příjem, Převod, Směna a **Výběr na kartu** (jen CZK / EUR / USD přes licencovaného poskytovatele).
 
 **EN:** ELFALL (Eleanor + Fallcoin) is a non-custodial Bitcoin wallet for Android & iOS with Receive, Transfer, Swap, and **Withdraw to card** (CZK / EUR / USD only via a licensed provider).
