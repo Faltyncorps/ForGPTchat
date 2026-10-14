@@ -52,9 +52,17 @@ data class Pending(
 )
 
 /** In-memory úložiště state -> Pending s TTL; pop je atomické a jednorázové (ochrana proti replay). */
-class PendingStore(private val ttlS: Long = 600, private val now: () -> Long = { System.currentTimeMillis() / 1000 }) {
+class PendingStore(
+    private val ttlS: Long = 600,
+    private val maxItems: Int = 10_000, // CWE-770: strop proti zahlcení paměti přes /auth/start
+    private val now: () -> Long = { System.currentTimeMillis() / 1000 },
+) {
     private val items = ConcurrentHashMap<String, Pending>()
-    fun put(state: String, p: Pending) { gc(); items[state] = p }
+    fun put(state: String, p: Pending) {
+        gc()
+        if (items.size >= maxItems) throw OidcError("příliš mnoho rozpracovaných přihlášení")
+        items[state] = p
+    }
     fun pop(state: String): Pending? { gc(); return items.remove(state) }
     private fun gc() { val t = now(); items.entries.removeIf { t - it.value.created > ttlS } }
 }

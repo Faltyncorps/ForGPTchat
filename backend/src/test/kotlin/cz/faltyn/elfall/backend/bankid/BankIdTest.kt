@@ -206,4 +206,18 @@ class BankIdTest {
         val op = Op(keys = JWKSet(listOf(KEY.toPublicJWK(), EC.toPublicJWK())))
         assertEquals("u", runBlocking { op.client.verifyIdToken(t, "n") }["sub"])
     }
+
+    // ---- security-review ----
+    @Test fun pendingStoreIsBounded() {
+        val st = PendingStore(maxItems = 2)
+        st.put("a", Pending("kyc", "v", "n", now())); st.put("b", Pending("kyc", "v", "n", now()))
+        assertFailsWith<OidcError> { st.put("c", Pending("kyc", "v", "n", now())) }
+        st.pop("a"); st.put("c", Pending("kyc", "v", "n", now()))
+    }
+    @Test fun expiredStateRejected() {
+        var t = 1000L
+        val st = PendingStore(ttlS = 10, now = { t })
+        st.put("a", Pending("kyc", "v", "n", t)); t += 11
+        assertEquals(null, st.pop("a"))
+    }
 }

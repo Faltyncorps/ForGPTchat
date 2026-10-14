@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ "FaltynIvo", "eleanor-rebuild", "elfall-0.5", "oidc-hardening", "kotlin-backend" ]
+    branches: [ "FaltynIvo", "eleanor-rebuild", "elfall-0.5", "oidc-hardening", "kotlin-backend", "security-review" ]
   pull_request:
   workflow_dispatch:
 

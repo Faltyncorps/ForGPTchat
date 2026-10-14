@@ -2,7 +2,7 @@ name: Integrity (signed critical constants)
 
 on:
   push:
-    branches: [ "eleanor-rebuild", "bankid-sandbox", "elfall-0.5", "oidc-hardening", "kotlin-backend", "FaltynIvo" ]
+    branches: [ "eleanor-rebuild", "bankid-sandbox", "elfall-0.5", "oidc-hardening", "kotlin-backend", "security-review", "FaltynIvo" ]
   pull_request:
   workflow_dispatch:
 

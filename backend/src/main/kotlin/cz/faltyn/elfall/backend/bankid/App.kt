@@ -7,7 +7,7 @@ import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
-import io.ktor.server.netty.Netty
+import io.ktor.server.cio.CIO as ServerCIO
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.request.receiveText
 import io.ktor.server.response.respondText
@@ -51,7 +51,11 @@ fun Application.bankIdModule(cfg: BankIdConfig, bank: BankIdClient, store: Pendi
             var nonce = randomToken()
             if (req.purpose == "txn") nonce = txnBinding(req.tx_hash!!, nonce)
             val scopes = when (req.purpose) { "kyc" -> cfg.kycScopes; "account" -> cfg.accountScopes; else -> cfg.txnScopes }
-            store.put(state, Pending(req.purpose, verifier, nonce, System.currentTimeMillis() / 1000, req.tx_hash, req.payout_iban, req.payout_holder))
+            try {
+                store.put(state, Pending(req.purpose, verifier, nonce, System.currentTimeMillis() / 1000, req.tx_hash, req.payout_iban, req.payout_holder))
+            } catch (e: OidcError) {
+                return@post call.json(HttpStatusCode.TooManyRequests, mapOf("detail" to e.message))
+            }
             val url = bank.authorizeUrl(scopes, state, nonce, challenge, stepUp = req.purpose == "txn")
             call.json(HttpStatusCode.OK, mapOf("authorize_url" to url, "state" to state))
         }
@@ -85,5 +89,5 @@ fun main() {
     val cfg = BankIdConfig.fromEnv()
     val bank = BankIdClient(cfg, HttpClient(CIO) { expectSuccess = false; engine { requestTimeout = 10_000 } })
     val port = System.getenv("PORT")?.toInt() ?: 8080
-    embeddedServer(Netty, port = port, host = System.getenv("BIND") ?: "127.0.0.1") { bankIdModule(cfg, bank) }.start(wait = true)
+    embeddedServer(ServerCIO, port = port, host = System.getenv("BIND") ?: "127.0.0.1") { bankIdModule(cfg, bank) }.start(wait = true)
 }

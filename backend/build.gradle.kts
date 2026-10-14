@@ -12,14 +12,14 @@ application { mainClass.set("cz.faltyn.elfall.backend.bankid.MainKt") }
 
 dependencies {
     implementation("io.ktor:ktor-server-core:$ktorVersion")
-    implementation("io.ktor:ktor-server-netty:$ktorVersion")
+    implementation("io.ktor:ktor-server-cio:$ktorVersion")
     implementation("io.ktor:ktor-server-content-negotiation:$ktorVersion")
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
     implementation("io.ktor:ktor-client-core:$ktorVersion")
     implementation("io.ktor:ktor-client-cio:$ktorVersion")
     implementation("com.nimbusds:nimbus-jose-jwt:10.3")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
-    implementation("ch.qos.logback:logback-classic:1.5.18")
+    implementation("ch.qos.logback:logback-classic:1.6.5")
     testImplementation(kotlin("test-junit"))
     testImplementation("io.ktor:ktor-server-test-host:$ktorVersion")
     testImplementation("io.ktor:ktor-client-mock:$ktorVersion")
