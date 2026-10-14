@@ -4,10 +4,11 @@ import com.nimbusds.jose.JOSEObjectType
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.JWSHeader
 import com.nimbusds.jose.crypto.ECDSAVerifier
-import com.nimbusds.jose.crypto.MACSigner
-import com.nimbusds.jose.crypto.MACVerifier
+import com.nimbusds.jose.crypto.Ed25519Signer
+import com.nimbusds.jose.crypto.Ed25519Verifier
 import com.nimbusds.jose.jwk.Curve
 import com.nimbusds.jose.jwk.ECKey
+import com.nimbusds.jose.jwk.OctetKeyPair
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import io.ktor.http.HttpStatusCode
@@ -28,7 +29,6 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.security.MessageDigest
-import java.security.SecureRandom
 import java.util.Base64
 import java.util.Date
 import java.util.UUID
@@ -45,11 +45,25 @@ data class ZtConfig(
     val publicBaseUrl: String,
     val tokenTtlS: Long = 300,
     val proofMaxAgeS: Long = 60,
-    val key: ByteArray = ByteArray(32).also(SecureRandom()::nextBytes), // HMAC klíč, rotuje restartem
+    /** Ed25519 podpisový klíč serveru (OKP JWK s `d`). Nikdy v repozitáři – jen z env/secret store, viz [fromEnv]. */
+    val signingKey: OctetKeyPair,
 ) {
     init {
+        require(signingKey.curve == Curve.Ed25519 && signingKey.isPrivate) { "signingKey musí být privátní Ed25519 OKP" }
         require(tokenTtlS in 1..300) { "TTL tokenu max 5 minut" }
         require(publicBaseUrl.startsWith("https://") || publicBaseUrl.startsWith("http://localhost")) { "publicBaseUrl musí být https" }
+    }
+    override fun toString() = "ZtConfig(publicBaseUrl=$publicBaseUrl, tokenTtlS=$tokenTtlS, kid=${signingKey.keyID})" // nikdy nevypisuje klíč
+
+    companion object {
+        /**
+         * Klíč z prostředí: `ZT_SIGNING_JWK_FILE` (cesta k souboru ze secret store, preferováno) nebo `ZT_SIGNING_JWK`
+         * (JSON OKP JWK). Bez klíče vrací null => Zero Trust se nespustí (fail-closed, žádný náhodný ani vestavěný klíč).
+         */
+        fun fromEnv(publicBaseUrl: String, e: Map<String, String> = System.getenv()): ZtConfig? {
+            val json = e["ZT_SIGNING_JWK_FILE"]?.let { java.io.File(it).readText() } ?: e["ZT_SIGNING_JWK"] ?: return null
+            return ZtConfig(publicBaseUrl, signingKey = OctetKeyPair.parse(json))
+        }
     }
 }
 
@@ -87,6 +101,7 @@ class ZeroTrust(val cfg: ZtConfig, val audit: AuditLog = AuditLog(), private val
     private val revokedCreds = ConcurrentHashMap.newKeySet<String>()
     private val revokedDevices = ConcurrentHashMap.newKeySet<String>()
     private val seenJti = ConcurrentHashMap<String, Long>()
+    private val verifier = Ed25519Verifier(cfg.signingKey.toPublicJWK())
 
     fun revokeCredential(id: String) { revokedCreds += id; audit.record("revoke", "-", "credential", ts = now()) }
     fun revokeDevice(jkt: String) { revokedDevices += jkt; audit.record("revoke", "-", "device", ts = now()) }
@@ -99,8 +114,8 @@ class ZeroTrust(val cfg: ZtConfig, val audit: AuditLog = AuditLog(), private val
         val claims = JWTClaimsSet.Builder().subject(user).claim("cred", credentialId)
             .claim("cnf", mapOf("jkt" to jkt)).issueTime(Date(t * 1000)).expirationTime(Date((t + cfg.tokenTtlS) * 1000))
             .jwtID(UUID.randomUUID().toString()).build()
-        val jwt = SignedJWT(JWSHeader.Builder(JWSAlgorithm.HS256).type(JOSEObjectType("at+jwt")).build(), claims)
-        jwt.sign(MACSigner(cfg.key)); return jwt.serialize()
+        val jwt = SignedJWT(JWSHeader.Builder(JWSAlgorithm.EdDSA).type(JOSEObjectType("at+jwt")).keyID(cfg.signingKey.keyID).build(), claims)
+        jwt.sign(Ed25519Signer(cfg.signingKey)); return jwt.serialize()
     }
 
     /** Ověří DPoP důkaz (podpis klíčem zařízení, htm/htu/iat/jti[, ath]) a vrátí veřejný klíč. */
@@ -125,7 +140,9 @@ class ZeroTrust(val cfg: ZtConfig, val audit: AuditLog = AuditLog(), private val
     fun verify(method: String, path: String, authorization: String?, proof: String?): ZtPrincipal {
         val token = authorization?.takeIf { it.startsWith("DPoP ") }?.removePrefix("DPoP ")?.trim() ?: throw ZtDenied("chybí DPoP token")
         val at = runCatching { SignedJWT.parse(token) }.getOrNull() ?: throw ZtDenied("neplatný token")
-        if (at.header.algorithm != JWSAlgorithm.HS256 || !at.verify(MACVerifier(cfg.key))) throw ZtDenied("podpis tokenu")
+        // jen EdDSA (Ed25519); HS*, none, RS*, ES* atd. zamítnuto ještě před ověřením podpisu
+        if (at.header.algorithm != JWSAlgorithm.EdDSA || at.header.type?.type != "at+jwt") throw ZtDenied("alg/typ tokenu")
+        if (!runCatching { at.verify(verifier) }.getOrDefault(false)) throw ZtDenied("podpis tokenu")
         val c = at.jwtClaimsSet
         val exp = c.expirationTime?.time?.div(1000) ?: throw ZtDenied("exp")
         val iat = c.issueTime?.time?.div(1000) ?: throw ZtDenied("iat")
