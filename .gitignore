@@ -44,3 +44,7 @@ service-account*.json
 id_rsa*
 id_ed25519*
 signing.properties
+*.eco
+proofs/spark/obj/
+proofs/spark/alire/
+proofs/idris/build/
