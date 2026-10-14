@@ -1,2 +1,2 @@
-# Formát ssh-keygen ALLOWED SIGNERS. Vlastník sem vloží SVŮJ veřejný podpisový klíč (ideálně FIDO2 sk-ssh-ed25519):
-# ivosicek123 namespaces="elfall-integrity" sk-ssh-ed25519@openssh.com AAAA... ivo@hw-key
+# Formát ssh-keygen ALLOWED SIGNERS. Principál + namespaces pro verify.
+ivosicek123 namespaces="elfall-integrity" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGvnoWl3Vg4HqOzkmR0W43++9+HQctbJZ+FfV5tUvIsb ShellFish@iPhone-14102026
