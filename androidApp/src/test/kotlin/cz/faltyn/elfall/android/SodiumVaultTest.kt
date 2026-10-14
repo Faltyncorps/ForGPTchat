@@ -36,4 +36,9 @@ class SodiumVaultTest {
     }
     @Test fun saltedHashesDiffer() = assertNotEquals(hasher.hash("1111".toCharArray()), hasher.hash("1111".toCharArray()))
     @Test fun weakParamsNeedRehash() = assertTrue(hasher.needsRehash(PinHasher(ls, 1, 8L * 1024 * 1024).hash("1".toCharArray())))
+
+    // Kompatibilita s Rust jádrem (core/, RustCrypto): vektor vytvořený v Rustu musí otevřít libsodium.
+    @Test fun rustCoreVaultVector() = assertEquals("GABCDEF",
+        SodiumVault(ls, ByteArray(32) { 0x42 }).open("payout", "sv1:AAECAwQFBgcICQoLDA0ODxAREhMUFRYXy73GpIPkgWFy7/n/ePZi7kBBt5WPl9s="))
+    @Test fun rustCoreArgon2idVector() = kotlin.test.assertTrue(PinHasher(ls).verify("1234".toCharArray(), "\$argon2id\$v=19\$m=1024,t=1,p=1\$CjaNrp63TTTVFnOC636bJA\$E9qhk2znI0VxIFdt7zJpPkS1xG+vmK2fNp9nFnD/zlo"))
 }

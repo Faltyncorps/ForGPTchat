@@ -85,14 +85,15 @@ class KeystoreSeedStore(context: Context) : SeedStore {
     }
 
     // SR-04: výplatní adresa a Stellar účet šifrované + autentizované (libsodium XChaCha20-Poly1305, AD = název pole).
-    private val vault: SodiumVault by lazy {
+    private val vault: LocalVault by lazy {
         val ls = com.goterl.lazysodium.LazySodiumAndroid(com.goterl.lazysodium.SodiumAndroid())
         val wrapper = KeystoreKeyWrapper("elfall_vault_wrap_v1")
         val stored = prefs.getString("vault_key", null)
         val key = stored?.let { wrapper.unwrap(Base64.decode(it, Base64.NO_WRAP)) } ?: SodiumVault.newDataKey(ls).also {
             prefs.edit().putString("vault_key", Base64.encodeToString(wrapper.wrap(it), Base64.NO_WRAP)).apply()
         }
-        SodiumVault(ls, key)
+        // Rust jádro jen při BuildConfig.RUST_CORE (výchozí vypnuto); formát sv1: je shodný → bez migrace
+        if (RustCore.enabled()) RustCoreVault(key) else SodiumVault(ls, key)
     }
 
     private fun putSealed(field: String, value: String?) {

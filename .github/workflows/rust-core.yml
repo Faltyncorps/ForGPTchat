@@ -1,0 +1,62 @@
+name: rust-core
+
+on:
+  push:
+    branches: [ "rust-core" ]
+    paths: [ "core/**", ".github/workflows/rust-core.yml", "androidApp/**" ]
+  pull_request:
+    paths: [ "core/**", ".github/workflows/rust-core.yml", "androidApp/**" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults: { run: { working-directory: core } }
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: { persist-credentials: false }
+      - name: Rust 1.90.0 (= lokálně ověřená verze) + wasm target
+        run: |
+          rustup toolchain install 1.90.0 --profile minimal -c clippy -t wasm32-unknown-unknown
+          rustup default 1.90.0
+      - run: cargo test --locked
+      - run: cargo test --locked --features ffi
+      - run: cargo clippy --locked --all-targets --features ffi -- -D warnings
+      - name: wasm build
+        run: cargo build --locked --release --target wasm32-unknown-unknown --features wasm
+      - name: UniFFI bindings (Kotlin + Swift) are up to date
+        run: |
+          cargo build --locked --features bindgen   # debug: release profil stripuje UniFFI metadata
+          ./target/debug/uniffi-bindgen generate --library target/debug/libelfall_core.so --language kotlin --language swift --no-format --out-dir /tmp/b
+          diff -r /tmp/b bindings
+      - name: cargo-deny 0.20.2 (advisories, bans, sources)
+        run: cargo install cargo-deny --version 0.20.2 --locked && cargo deny check advisories bans sources
+
+  android-rust:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with: { distribution: temurin, java-version: "17" }
+      - name: Rust 1.90.0 + Android targets + cargo-ndk
+        run: |
+          rustup toolchain install 1.90.0 --profile minimal -t aarch64-linux-android -t armv7-linux-androideabi -t x86_64-linux-android
+          rustup default 1.90.0
+          cargo install cargo-ndk --version 3.5.4 --locked
+      - name: NDK 27.3
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;27.3.13750724" > /dev/null
+      - name: Host lib + JVM interop tests (Rust ↔ lazysodium)
+        run: |
+          (cd core && cargo build --locked --release --features ffi --lib)
+          ./gradlew :androidApp:testElfallBitcoinTestnetDebugUnitTest --console=plain
+      - name: APK s Rust jádrem (příznak zapnut jen v CI buildu)
+        env: { ANDROID_NDK_HOME: "/usr/local/lib/android/sdk/ndk/27.3.13750724" }
+        run: |
+          ./gradlew -Pelfall.rustCore=true :androidApp:assembleElfallBitcoinTestnetDebug --console=plain
+          unzip -l androidApp/build/outputs/apk/elfallBitcoinTestnet/debug/*.apk | grep -c libelfall_core.so | grep -qx 3
