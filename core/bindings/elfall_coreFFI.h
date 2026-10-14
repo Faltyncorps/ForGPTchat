@@ -251,6 +251,62 @@ typedef void (*UniffiForeignFutureCompleteVoid)(uint64_t, UniffiForeignFutureStr
     );
 
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_FN_CLONE_SECURECHANNEL
+#define UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_FN_CLONE_SECURECHANNEL
+void*_Nonnull uniffi_elfall_core_fn_clone_securechannel(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_FN_FREE_SECURECHANNEL
+#define UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_FN_FREE_SECURECHANNEL
+void uniffi_elfall_core_fn_free_securechannel(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_FN_CONSTRUCTOR_SECURECHANNEL_CLIENT
+#define UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_FN_CONSTRUCTOR_SECURECHANNEL_CLIENT
+void*_Nonnull uniffi_elfall_core_fn_constructor_securechannel_client(RustBuffer server_pk, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_FN_CONSTRUCTOR_SECURECHANNEL_SERVER
+#define UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_FN_CONSTRUCTOR_SECURECHANNEL_SERVER
+void*_Nonnull uniffi_elfall_core_fn_constructor_securechannel_server(RustBuffer server_secret, RustBuffer client_pk, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_FN_METHOD_SECURECHANNEL_ACCEPT_HEADER
+#define UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_FN_METHOD_SECURECHANNEL_ACCEPT_HEADER
+void uniffi_elfall_core_fn_method_securechannel_accept_header(void*_Nonnull ptr, RustBuffer header, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_FN_METHOD_SECURECHANNEL_BINDING
+#define UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_FN_METHOD_SECURECHANNEL_BINDING
+RustBuffer uniffi_elfall_core_fn_method_securechannel_binding(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_FN_METHOD_SECURECHANNEL_HEADER
+#define UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_FN_METHOD_SECURECHANNEL_HEADER
+RustBuffer uniffi_elfall_core_fn_method_securechannel_header(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_FN_METHOD_SECURECHANNEL_OPEN
+#define UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_FN_METHOD_SECURECHANNEL_OPEN
+RustBuffer uniffi_elfall_core_fn_method_securechannel_open(void*_Nonnull ptr, RustBuffer ciphertext, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_FN_METHOD_SECURECHANNEL_PUBLIC_KEY
+#define UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_FN_METHOD_SECURECHANNEL_PUBLIC_KEY
+RustBuffer uniffi_elfall_core_fn_method_securechannel_public_key(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_FN_METHOD_SECURECHANNEL_SEAL
+#define UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_FN_METHOD_SECURECHANNEL_SEAL
+RustBuffer uniffi_elfall_core_fn_method_securechannel_seal(void*_Nonnull ptr, RustBuffer msg, int8_t last, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_FN_FUNC_CHANNEL_KEYPAIR
+#define UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_FN_FUNC_CHANNEL_KEYPAIR
+RustBuffer uniffi_elfall_core_fn_func_channel_keypair(RustCallStatus *_Nonnull out_status
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_FN_FUNC_ED25519_GENERATE
 #define UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_FN_FUNC_ED25519_GENERATE
 RustBuffer uniffi_elfall_core_fn_func_ed25519_generate(RustCallStatus *_Nonnull out_status
@@ -593,6 +649,12 @@ void ffi_elfall_core_rust_future_free_void(uint64_t handle
 void ffi_elfall_core_rust_future_complete_void(uint64_t handle, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_CHECKSUM_FUNC_CHANNEL_KEYPAIR
+#define UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_CHECKSUM_FUNC_CHANNEL_KEYPAIR
+uint16_t uniffi_elfall_core_checksum_func_channel_keypair(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_CHECKSUM_FUNC_ED25519_GENERATE
 #define UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_CHECKSUM_FUNC_ED25519_GENERATE
 uint16_t uniffi_elfall_core_checksum_func_ed25519_generate(void
@@ -662,6 +724,54 @@ uint16_t uniffi_elfall_core_checksum_func_vault_open(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_CHECKSUM_FUNC_VAULT_SEAL
 #define UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_CHECKSUM_FUNC_VAULT_SEAL
 uint16_t uniffi_elfall_core_checksum_func_vault_seal(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_CHECKSUM_METHOD_SECURECHANNEL_ACCEPT_HEADER
+#define UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_CHECKSUM_METHOD_SECURECHANNEL_ACCEPT_HEADER
+uint16_t uniffi_elfall_core_checksum_method_securechannel_accept_header(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_CHECKSUM_METHOD_SECURECHANNEL_BINDING
+#define UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_CHECKSUM_METHOD_SECURECHANNEL_BINDING
+uint16_t uniffi_elfall_core_checksum_method_securechannel_binding(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_CHECKSUM_METHOD_SECURECHANNEL_HEADER
+#define UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_CHECKSUM_METHOD_SECURECHANNEL_HEADER
+uint16_t uniffi_elfall_core_checksum_method_securechannel_header(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_CHECKSUM_METHOD_SECURECHANNEL_OPEN
+#define UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_CHECKSUM_METHOD_SECURECHANNEL_OPEN
+uint16_t uniffi_elfall_core_checksum_method_securechannel_open(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_CHECKSUM_METHOD_SECURECHANNEL_PUBLIC_KEY
+#define UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_CHECKSUM_METHOD_SECURECHANNEL_PUBLIC_KEY
+uint16_t uniffi_elfall_core_checksum_method_securechannel_public_key(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_CHECKSUM_METHOD_SECURECHANNEL_SEAL
+#define UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_CHECKSUM_METHOD_SECURECHANNEL_SEAL
+uint16_t uniffi_elfall_core_checksum_method_securechannel_seal(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_CHECKSUM_CONSTRUCTOR_SECURECHANNEL_CLIENT
+#define UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_CHECKSUM_CONSTRUCTOR_SECURECHANNEL_CLIENT
+uint16_t uniffi_elfall_core_checksum_constructor_securechannel_client(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_CHECKSUM_CONSTRUCTOR_SECURECHANNEL_SERVER
+#define UNIFFI_FFIDEF_UNIFFI_ELFALL_CORE_CHECKSUM_CONSTRUCTOR_SECURECHANNEL_SERVER
+uint16_t uniffi_elfall_core_checksum_constructor_securechannel_server(void
     
 );
 #endif
