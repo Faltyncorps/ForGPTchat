@@ -11,4 +11,5 @@
 | 2026-10-14 | Politika | Algoritmy id_tokenu: PS512 (jediný podporovaný Bank iD), PS256, ES256; RS256/HS*/none zakázány | platí |
 | 2026-10-14 | Integrita | Manifest SHA-512 + podpisy jen Ed25519 | hotovo |
 | 2026-10-14 | Otevřené | Chybí veřejný Ed25519 klíč vlastníka v `integrity/allowed_signers` → CI krok podpisu selhává | čeká na vlastníka |
+| 2026-10-14 | Prevence | Příručka obrany (DEFENSE-PLAYBOOK.md) a obrazovka „Bezpečnostní kontrola“ ve webové aplikaci | hotovo (security-review) |
 | 2026-10-14 | Revize | Bezpečnostní revize (semgrep, gitleaks, osv-scanner, detekt, ruční): viz `REVIEW-2026-10-14.md` | opraveny SR-01, SR-02, SR-07; ostatní doporučení |

@@ -167,3 +167,21 @@ const BANKID_ISSUER = 'https://oidc.sandbox.bankid.cz/'; // sandbox
     } catch (e) { alert('Ověření přes Bank iD se nezdařilo'); }
   });
 })();
+
+// --- Bezpečnostní kontrola (jen lokální stav, žádná data neopouštějí zařízení) ---
+(function securityChecklist() {
+  const boxes = document.querySelectorAll('[data-sec]');
+  if (!boxes.length) return;
+  const KEY = 'elfall.securityChecklist';
+  let state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { state = {}; }
+  const score = () => {
+    const done = [...boxes].filter((b) => b.checked).length;
+    document.getElementById('sec-score').textContent = `Splněno ${done} z ${boxes.length}.`;
+  };
+  boxes.forEach((b) => {
+    b.checked = state[b.dataset.sec] === true;
+    b.addEventListener('change', () => { state[b.dataset.sec] = b.checked; localStorage.setItem(KEY, JSON.stringify(state)); score(); });
+  });
+  score();
+})();
