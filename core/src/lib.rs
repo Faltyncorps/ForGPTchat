@@ -5,6 +5,7 @@
 #![deny(clippy::undocumented_unsafe_blocks)] // každý unsafe blok má SAFETY s invariantem
 
 pub mod framing;
+pub mod validate;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod pin;
 #[cfg(not(target_arch = "wasm32"))]

@@ -38,6 +38,18 @@ final class SecureEnclaveSigner: NSObject, HardwareKeySigner {
         #endif
     }
 
+    /// Podpis s předaným LAContextem (už ověřeným Face ID) – bez druhého dotazu na biometrii.
+    func sign(_ msg: Data, context: LAContext) -> Data? {
+        let q: [String: Any] = [kSecClass as String: kSecClassKey, kSecAttrApplicationTag as String: tag,
+                                kSecAttrKeyType as String: kSecAttrKeyTypeECSECPrimeRandom, kSecReturnRef as String: true,
+                                kSecUseAuthenticationContext as String: context]
+        var item: CFTypeRef?
+        guard SecItemCopyMatching(q as CFDictionary, &item) == errSecSuccess, let k = item else { _ = try? loadOrCreate(); return nil }
+        var err: Unmanaged<CFError>?
+        guard let der = SecKeyCreateSignature(k as! SecKey, .ecdsaSignatureMessageX962SHA256, msg as CFData, &err) as Data? else { return nil }
+        return SecureEnclaveSigner.derToRaw(der)
+    }
+
     func publicKeyX963() -> KotlinByteArray {
         guard let k = try? loadOrCreate(), let pub = SecKeyCopyPublicKey(k),
               let d = SecKeyCopyExternalRepresentation(pub, nil) as Data? else { return KotlinByteArray(size: 0) }

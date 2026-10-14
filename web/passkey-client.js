@@ -20,7 +20,9 @@
     return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   }
   function checkRp(rpId, host) {
-    if (!(host === rpId || host.endsWith('.' + rpId))) throw new Error('rpId neodpovídá originu');
+    const c = (typeof globalThis !== 'undefined') && globalThis.ElfallCore; // Rust/Wasm, pokud je načten
+    const ok = c ? c.rpIdMatches(String(rpId), String(host)) : (host === rpId || host.endsWith('.' + rpId));
+    if (!ok) throw new Error('rpId neodpovídá originu');
   }
   function checkChallenge(c) { if (toBuf(c).byteLength < 16) throw new Error('slabá challenge'); }
 

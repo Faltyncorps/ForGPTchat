@@ -1,4 +1,3 @@
-// Kopie iosApp/iosApp/RustGpuHandoff.swift (větev ios-uikit-core) pro ověření C ABI na Linuxu.
 #if RUST_CORE
 import Foundation
 #if canImport(elfall_coreFFI)

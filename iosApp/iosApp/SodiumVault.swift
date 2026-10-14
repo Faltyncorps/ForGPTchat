@@ -4,13 +4,31 @@ import Sodium
 
 /// At-rest šifrování citlivých lokálních dat (libsodium XChaCha20-Poly1305-IETF, AD = název pole).
 /// Datový klíč (32 B) je v Keychainu jako kSecAttrAccessibleWhenUnlockedThisDeviceOnly (nezálohuje se, nepřenáší).
-final class SodiumVault {
+/// Společné rozhraní lokálního vaultu – SodiumVault (swift-sodium) i RustCoreVault mají formát `sv1:`.
+protocol LocalVault {
+    func seal(field: String, _ plaintext: String) -> String?
+    func open(field: String, _ sealed: String) -> String?
+}
+
+/// Volba implementace: Rust jádro jen při kompilační podmínce RUST_CORE (výchozí vypnuto).
+enum Vaults {
+    static var local: LocalVault {
+        #if RUST_CORE
+        return RustCoreVault.shared
+        #else
+        return SodiumVault.shared
+        #endif
+    }
+}
+
+final class SodiumVault: LocalVault {
     static let shared = SodiumVault()
     private let sodium = Sodium()
     private let prefix = "sv1:"
     private let keyAccount = "cz.faltyn.elfall.vault.v1"
 
-    private func dataKey() -> Bytes? {
+    /// Datový klíč sdílený oběma implementacemi (žádná migrace dat při přepnutí příznaku).
+    func dataKey() -> Bytes? {
         let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrAccount as String: keyAccount, kSecReturnData as String: true]
         var item: CFTypeRef?
         if SecItemCopyMatching(q as CFDictionary, &item) == errSecSuccess, let d = item as? Data { return Bytes(d) }
