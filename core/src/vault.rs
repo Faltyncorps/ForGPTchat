@@ -19,7 +19,7 @@ fn cipher(key: &[u8]) -> Result<XChaCha20Poly1305, CoreError> {
     if key.len() != 32 {
         return Err(CoreError::InvalidLength);
     }
-    Ok(XChaCha20Poly1305::new_from_slice(key).map_err(|_| CoreError::InvalidLength)?)
+    XChaCha20Poly1305::new_from_slice(key).map_err(|_| CoreError::InvalidLength)
 }
 
 pub fn new_key() -> Result<Zeroizing<[u8; 32]>, CoreError> {
