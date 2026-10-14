@@ -48,3 +48,8 @@ signing.properties
 proofs/spark/obj/
 proofs/spark/alire/
 proofs/idris/build/
+
+# jscpd reports (local)
+.jscpd-compare/
+jscpd-report/
+report/jscpd*
