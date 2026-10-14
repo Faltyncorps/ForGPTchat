@@ -84,7 +84,7 @@ jobs:
         with: { ocaml-compiler: "4.14.2" }
       - name: Install Rocq (pinned)
         run: opam install -y rocq-core.9.3.0 rocq-stdlib.9.2.0
-      - name: Check Rocq proofs (KeyPolicy, Framing)
+      - name: Check Rocq proofs (KeyPolicy, Framing, WalletPolicy)
         working-directory: proofs/rocq
         run: |
           for f in *.v; do opam exec -- rocq compile "$f"; done

@@ -25,3 +25,16 @@ které vynucuje backend (`ZeroTrust.kt`) a mobilní aplikace.
   (délka 4 B, dekódování ∘ kódování = id do MAX) – pro BE u32 platí, v Rustu kryto testy.
 - `no_double_free`, `foreign_pointer_rejected` – model registru `LIVE` v `core/src/gpu.rs`.
 Model není extrahovaný kód: shodu s Rustem drží testy (`core/tests/`), ne důkaz.
+
+## WalletPolicy.v – tajný klíč nikdy neopustí peněženku
+
+Model (abstraktní identifikátory klíčů, žádný skutečný klíč):
+- `never_exports_secret`, `initial_safe` – klíče vznikají s atributem `exportable = false`; každá operace API
+  (Generate, Sign, Delete, ExportKey, OfframpOpen, BindPayout, Withdraw) tento invariant zachovává a žádná
+  posloupnost operací nevydá výstup `Secret`.
+- `allowlist_exact`, `allowlist_has_three`, `offramp_only_allowlisted` – off-ramp URL vždy začíná jedním ze tří
+  pevných prefixů (MoonPay, Coinbase, anycoin.cz – shodně s `integrity/critical.json`).
+- `withdraw_only_bound`, `binding_permanent` – výplata jen na navázanou adresu; po navázání ji žádná operace nezmění.
+
+Nedokazuje: že Kotlin/Swift/Rust implementace model dodržuje (pokrývají testy), hardwarovou nevyjmutelnost
+(spoléhá na Secure Enclave / Android Keystore / StrongBox), ani obnovu adresy po ztrátě zařízení.
