@@ -25,3 +25,11 @@
 /web/                                                          @ivosicek123
 /gradle/wrapper/                                               @ivosicek123
 /gradle/verification-metadata.xml                              @ivosicek123
+# kotlin-backend: Ktor server, iOS identita/Secure Enclave, build skripty
+/backend/src/                                                  @ivosicek123
+/backend/build.gradle.kts                                      @ivosicek123
+/settings.gradle.kts                                           @ivosicek123
+/build.gradle.kts                                              @ivosicek123
+/iosApp/iosApp/BankIdAuthSession.swift                         @ivosicek123
+/iosApp/iosApp/SecureEnclaveSigner.swift                       @ivosicek123
+/shared/src/iosMain/                                           @ivosicek123

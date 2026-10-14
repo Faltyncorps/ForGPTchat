@@ -4,7 +4,9 @@ Stav: **experimentální, feature flag vypnutý** (`IdentityFlags.bankIdEnabled 
 
 ## Architektura
 
-- `backend/bankid/` – FastAPI služba (Python). Drží `client_secret`, PKCE verifier, nonce a state; vyměňuje code, ověřuje id_token (PS512 přes JWKS, `iss`, `aud`, `exp`, `nonce`, u transakce `auth_time`).
+- `backend/` – Kotlin/Ktor (JVM) služba, ověřování JWT přes nimbus-jose-jwt. Drží `client_secret`, PKCE verifier, nonce a jednorázový state; vyměňuje code, ověřuje id_token přes JWKS (`iss`, `aud`, `azp`, `exp`, `iat`, `nonce`, u transakce `auth_time`). Původní Python/FastAPI verze je jen v historii gitu (commit e22bf48).
+- Algoritmy: Bank iD dle discovery (`id_token_signing_alg_values_supported`) podporuje **pouze PS512** – proto zůstává povolen. Navíc PS256 a ES256 (rotace). **RS256, HS\*, `none` jsou odmítnuty.**
+- iOS: `BankIdLoginFlow` (shared) + `BankIdAuthSession.swift` (ASWebAuthenticationSession, ephemeral) + `SecureEnclaveSigner.swift` (P-256/ES256 v Secure Enclave, biometrie); návratové schéma `elfall://`.
 - `shared/.../identity/IdentityVerifier.kt` – rozhraní `IdentityVerifier`, implementace `BankIdVerifier` (volá backend), `WithdrawalGate`.
 - UI: tlačítko **„Ověřit přes Bank iD“** v Nastavení (Android/iOS/web) a **„Potvrdit výběr přes Bank iD“** v kroku před výběrem/odesláním (Android/iOS). Napojení tlačítek na otevření prohlížeče (Custom Tab / ASWebAuthenticationSession) je TODO – flag je vypnutý.
 
@@ -48,8 +50,8 @@ Pozn.: Bank iD nabízí i scope `sign.*` a claim `txn`; pro skutečnou autorizac
 2. Vytvořit **aplikaci** v sandbox prostředí.
 3. OIDC nastavení: Redirect URI (např. `https://<váš-backend>/bankid/callback` nebo app-link), grant `authorization_code`, auth metoda `client_secret_post`.
 4. Scopes: povinné `openid`; volitelně `profile.name`, `profile.birthdate`, `profile.verification`, `profile.paymentAccounts` (nic navíc).
-5. Zkopírovat `client_id` a `client_secret` do proměnných prostředí (`backend/bankid/.env.example` → `.env`, **necommitovat**).
-6. Spuštění: `pip install -r backend/bankid/requirements.txt && uvicorn backend.bankid.app:app`; ve webu doplnit backend do CSP `connect-src`.
+5. Zkopírovat `client_id` a `client_secret` do proměnných prostředí (`backend/.env.example` → `.env`, **necommitovat**).
+6. Spuštění: `set -a; . backend/.env; set +a; ./gradlew :backend:run` (výchozí bind 127.0.0.1:8080, `PORT`/`BIND` env); ve webu doplnit backend do CSP `connect-src`.
 7. Sandbox používá testovací banku a fiktivní osoby – nikdy reálné údaje.
 
 ## Produkce – požadavky
@@ -68,7 +70,8 @@ Pozn.: Bank iD nabízí i scope `sign.*` a claim `txn`; pro skutečnou autorizac
 
 ## Testy
 
-- `python -m pytest -c backend/bankid/pytest.ini backend/bankid/tests` (mockovaný OIDC přes respx, RSA klíč generovaný v testu).
+- `./gradlew :backend:test` (24 testů: port 21 Python testů + RS256 odmítnut, PS256/ES256 přijaty; mockovaný OIDC přes Ktor MockEngine).
+- `./gradlew :shared:testDebugUnitTest` / `:shared:iosSimulatorArm64Test` (OidcCallbackTests, BankIdLoginFlowTests).
 - `./gradlew :shared:testDebugUnitTest` (`BankIdVerifierTests`, ktor MockEngine).
 
 ## Zdroje

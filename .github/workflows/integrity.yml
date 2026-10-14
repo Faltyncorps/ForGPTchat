@@ -2,7 +2,7 @@ name: Integrity (signed critical constants)
 
 on:
   push:
-    branches: [ "eleanor-rebuild", "bankid-sandbox", "elfall-0.5", "oidc-hardening", "FaltynIvo" ]
+    branches: [ "eleanor-rebuild", "bankid-sandbox", "elfall-0.5", "oidc-hardening", "kotlin-backend", "FaltynIvo" ]
   pull_request:
   workflow_dispatch:
 
@@ -30,7 +30,9 @@ jobs:
           ! grep -RInE 'BANKID_CLIENT_SECRET=[^c$ ]|-----BEGIN [A-Z ]*PRIVATE KEY' --exclude-dir=.git --exclude-dir=.github . 
       - name: Unit tests of the integrity checker
         run: pip install "pytest==8.3.5" && python -m pytest -q scripts/tests
-      - name: Bank iD OIDC backend tests
-        run: pip install -r backend/bankid/requirements.txt && python -m pytest -q -c backend/bankid/pytest.ini backend/bankid/tests
+      - name: Manifest is SHA-512 and signers are Ed25519 only
+        run: |
+          awk '{ if (length($1) != 128) exit 1 }' integrity/MANIFEST.sha512
+          ! grep -vE '^\s*(#|$)' integrity/allowed_signers | grep -vE ' (ssh-ed25519|sk-ssh-ed25519@openssh\.com) '
       - name: Web OIDC client tests (node:test)
         run: node --test web/tests/

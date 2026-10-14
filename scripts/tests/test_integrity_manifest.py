@@ -54,13 +54,23 @@ def test_signature_roundtrip(repo, tmp_path):
     subprocess.run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-f", str(key)], check=True)
     pub = (tmp_path / "k.pub").read_text().strip()
     (repo / "integrity/allowed_signers").write_text(f'ivosicek123 namespaces="elfall-integrity" {pub}\n')
-    (repo / "integrity/MANIFEST.sha256").write_text(im.build_manifest(repo))
+    (repo / "integrity/MANIFEST.sha512").write_text(im.build_manifest(repo))
     subprocess.run(["ssh-keygen", "-Y", "sign", "-f", str(key), "-n", "elfall-integrity",
-                    str(repo / "integrity/MANIFEST.sha256")], check=True, capture_output=True)
+                    str(repo / "integrity/MANIFEST.sha512")], check=True, capture_output=True)
     assert im.verify_signature(repo) is None
-    (repo / "integrity/MANIFEST.sha256").write_text("tampered\n")
+    (repo / "integrity/MANIFEST.sha512").write_text("tampered\n")
     assert "neplatný" in im.verify_signature(repo)
 
 
 def test_unsigned_reports_missing_key(repo):
     assert "allowed_signers" in im.verify_signature(repo)
+
+
+def test_rsa_signer_rejected(repo):
+    (repo / "integrity/allowed_signers").write_text('ivosicek123 namespaces="elfall-integrity" ssh-rsa AAAAB3Nza... x\n')
+    assert "Ed25519" in im.verify_signature(repo)
+
+
+def test_manifest_is_sha512(repo):
+    line = im.build_manifest(repo).splitlines()[0]
+    assert len(line.split()[0]) == 128

@@ -26,6 +26,9 @@ targets:
         NSFaceIDUsageDescription: "Face ID chrání vaši peněženku / Face ID protects your wallet seed."
         NSCameraUsageDescription: "Skenování QR adres / Scan payment QR codes."
         ELEANOR_STANDALONE: true
+        CFBundleURLTypes:
+          - CFBundleURLName: cz.faltyn.elfall.bankid
+            CFBundleURLSchemes: [ "elfall" ]
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
           NSAllowsArbitraryLoadsInWebContent: false

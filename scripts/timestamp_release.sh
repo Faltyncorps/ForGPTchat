@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Ukotvení hashů release artefaktů v Bitcoinu přes OpenTimestamps (https://opentimestamps.org).
-# Použití: scripts/timestamp_release.sh <soubor|adresář>...   (např. APK, IPA, SBOM, MANIFEST.sha256, podepsané PDF)
+# Použití: scripts/timestamp_release.sh <soubor|adresář>...   (např. APK, IPA, SBOM, MANIFEST.sha512, podepsané PDF)
 # Výstup: release-hashes-<datum>.sha256 + .ots (důkaz). Po ~1–6 h: `ots upgrade *.ots`, ověření: `ots verify *.ots`.
 # Instalace klienta: pipx install opentimestamps-client
 set -euo pipefail

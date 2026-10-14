@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """ELFALL integrity manifest – ochrana proti tichému 'swap' útoku na kritické hodnoty.
 
-  generate  – přepočítá integrity/MANIFEST.sha256 ze souborů v integrity/protected-files.txt
+  generate  – přepočítá integrity/MANIFEST.sha512 ze souborů v integrity/protected-files.txt
   verify    – (CI) 1) hashe souborů == manifest, 2) konstanty ve zdrojácích == integrity/critical.json,
-              3) podpis integrity/MANIFEST.sha256.sig ověřený přes ssh-keygen -Y verify a integrity/allowed_signers.
+              3) podpis integrity/MANIFEST.sha512.sig ověřený přes ssh-keygen -Y verify a integrity/allowed_signers.
               --no-signature přeskočí bod 3 (jen lokální vývoj).
 """
 from __future__ import annotations
@@ -19,8 +19,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 INTEG = ROOT / "integrity"
-MANIFEST = INTEG / "MANIFEST.sha256"
-SIG = INTEG / "MANIFEST.sha256.sig"
+MANIFEST = INTEG / "MANIFEST.sha512"
+SIG = INTEG / "MANIFEST.sha512.sig"
 SIGNERS = INTEG / "allowed_signers"
 NAMESPACE = "elfall-integrity"
 IDENTITY = "ivosicek123"
@@ -33,8 +33,12 @@ def protected(root: Path = ROOT) -> list[str]:
     return [ln.strip() for ln in lines if ln.strip() and not ln.startswith("#")]
 
 
-def sha256(p: Path) -> str:
-    return hashlib.sha256(p.read_bytes()).hexdigest()
+def sha512(p: Path) -> str:
+    return hashlib.sha512(p.read_bytes()).hexdigest()
+
+
+# Povolené typy podpisových klíčů vlastníka: jen Ed25519 (softwarový nebo FIDO2 hardware).
+ALLOWED_KEY_TYPES = ("ssh-ed25519", "sk-ssh-ed25519@openssh.com")
 
 
 def build_manifest(root: Path = ROOT) -> str:
@@ -43,7 +47,7 @@ def build_manifest(root: Path = ROOT) -> str:
         p = root / rel
         if not p.is_file():
             raise SystemExit(f"Chráněný soubor chybí: {rel}")
-        out.append(f"{sha256(p)}  {rel}")
+        out.append(f"{sha512(p)}  {rel}")
     return "\n".join(out) + "\n"
 
 
@@ -88,12 +92,15 @@ def verify_signature(root: Path = ROOT) -> str | None:
     keys = [ln for ln in signers.read_text().splitlines() if ln.strip() and not ln.startswith("#")]
     if not keys:
         return "integrity/allowed_signers neobsahuje veřejný klíč vlastníka"
-    sig = root / "integrity" / "MANIFEST.sha256.sig"
+    for ln in keys:
+        if not any(f" {t} " in f" {ln} " for t in ALLOWED_KEY_TYPES):
+            return "integrity/allowed_signers: povoleny jen klíče Ed25519 (ssh-ed25519 / sk-ssh-ed25519@openssh.com)"
+    sig = root / "integrity" / "MANIFEST.sha512.sig"
     if not sig.is_file():
-        return "chybí integrity/MANIFEST.sha256.sig – vlastník musí spustit scripts/sign_manifest.sh"
+        return "chybí integrity/MANIFEST.sha512.sig – vlastník musí spustit scripts/sign_manifest.sh"
     if not shutil.which("ssh-keygen"):
         return "ssh-keygen není k dispozici"
-    with (root / "integrity" / "MANIFEST.sha256").open("rb") as f:
+    with (root / "integrity" / "MANIFEST.sha512").open("rb") as f:
         r = subprocess.run(["ssh-keygen", "-Y", "verify", "-f", str(signers), "-I", IDENTITY,
                             "-n", NAMESPACE, "-s", str(sig)], stdin=f, capture_output=True, text=True)
     return None if r.returncode == 0 else f"podpis manifestu neplatný: {r.stderr.strip() or r.stdout.strip()}"
@@ -111,7 +118,7 @@ def main(argv: list[str] | None = None) -> int:
     errs = check_constants()
     current = build_manifest()
     if not MANIFEST.is_file() or MANIFEST.read_text(encoding="utf-8") != current:
-        errs.append("chráněné soubory se liší od integrity/MANIFEST.sha256 (změna bez nového podpisu)")
+        errs.append("chráněné soubory se liší od integrity/MANIFEST.sha512 (změna bez nového podpisu)")
     if not a.no_signature:
         e = verify_signature()
         if e:

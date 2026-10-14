@@ -5,8 +5,8 @@ URL poskytovatelů off-rampu, atribuci autora ani výplatní údaje.
 
 ## Vrstvy
 1. **`integrity/critical.json`** – kanonické hodnoty (issuer `GCUMZ6Z7…RPKT`, `FLC`/`yFLC`, `home_domain`, 0,33 USD, URL prefixy, autor).
-2. **`integrity/MANIFEST.sha256`** – SHA-256 souborů z `integrity/protected-files.txt`.
-3. **`integrity/MANIFEST.sha256.sig`** – SSH podpis vlastníka (`ssh-keygen -Y sign`, namespace `elfall-integrity`),
+2. **`integrity/MANIFEST.sha512`** – SHA-512 souborů z `integrity/protected-files.txt`.
+3. **`integrity/MANIFEST.sha512.sig`** – SSH podpis vlastníka (`ssh-keygen -Y sign`, namespace `elfall-integrity`),
    ověřovaný proti `integrity/allowed_signers` (veřejný klíč vlastníka, nejlépe hardwarový FIDO2 `sk-ssh-ed25519`).
 4. **CI `.github/workflows/integrity.yml`** – `scripts/integrity_manifest.py verify` selže, pokud: hash ≠ manifest,
    konstanta ve zdroji ≠ critical.json, chybí/neplatí podpis, nebo se v chráněném souboru objeví vzor čísla účtu.
@@ -40,7 +40,7 @@ předložením účtu + soli (např. notáři), aniž by byl účet kdy veřejn�
 ## Ukotvení release v čase – OpenTimestamps
 ```bash
 pipx install opentimestamps-client
-scripts/timestamp_release.sh androidApp/build/outputs/apk integrity/MANIFEST.sha256 elfall-sbom.spdx.json
+scripts/timestamp_release.sh androidApp/build/outputs/apk integrity/MANIFEST.sha512 elfall-sbom.spdx.json
 ots upgrade release-hashes-*.ots     # po několika hodinách (potvrzení v Bitcoin bloku)
 ots verify  release-hashes-*.ots
 ```
