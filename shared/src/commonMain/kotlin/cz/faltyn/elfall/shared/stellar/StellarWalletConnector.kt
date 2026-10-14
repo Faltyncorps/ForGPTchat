@@ -69,3 +69,11 @@ class FreighterConnector : StellarWalletConnector {
 }
 
 fun defaultStellarConnectors(): List<StellarWalletConnector> = listOf(LobstrConnector(), FreighterConnector())
+
+/** Freighter intent pro platbu do vlastní (owner) peněženky projektu – viz [StellarOwnerWallet]. */
+fun FreighterConnector.payOwnerIntent(
+    amount: String? = null,
+    assetCode: String? = null,
+    assetIssuer: String? = null,
+    memo: String? = null,
+): StellarConnectIntent = payIntent(StellarOwnerWallet.payToOwner(amount, assetCode, assetIssuer, memo))
