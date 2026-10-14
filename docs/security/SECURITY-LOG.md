@@ -22,3 +22,7 @@
 | 2026-10-14 | Formální důkaz | Idris2: invarianty FLC (pevný strop nabídky, zmrazený yFLC nepřevoditelný) – model, CI (`proofs/idris/`) | hotovo (security-review) |
 | 2026-10-14 | Autentizace | WebAuthn passkeys: backend webauthn4j (ES256/EdDSA, UV required, jednorázové challenge) + web klient, testy; úložiště zatím v paměti | rozpracováno (security-review) |
 | 2026-10-14 | Plán | `ZERO-TRUST-ROADMAP.md`: passkeys → ZTNA → Rust jádro (UniFFI/Wasm) → Suricata/Zeek, Cilium/eBPF → HACL*/F* | platí |
+| 2026-10-14 | Formální důkaz | Rocq 9.3: politika přístupu ke klíčům – autorizuje jen passkey + klíč zařízení vlastníka, odvolaný klíč nikdy (ani v budoucích stavech) (`proofs/rocq/`), CI | hotovo (zero-trust) |
+| 2026-10-14 | Zero Trust | Backend: deny-by-default Ktor plugin, DPoP tokeny ≤ 5 min vázané na passkey credential + P-256 klíč zařízení, replay ochrana, revokace, auditní log s hash řetězem; 15 testů | hotovo (zero-trust), nenasazeno |
+| 2026-10-14 | Návrh | `deploy/ztna/`: Cilium L7 politika, XDP filtr, Suricata pravidla – **nenasazeno** | dokumentováno |
+| 2026-10-14 | Změna | Rust jádro `core/` (větev rust-core): první modul = rámování vstupu podpisu | čeká na schválení |
