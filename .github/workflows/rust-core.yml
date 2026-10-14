@@ -1,0 +1,38 @@
+name: rust-core
+
+on:
+  push:
+    branches: [ "rust-core" ]
+    paths: [ "core/**", ".github/workflows/rust-core.yml" ]
+  pull_request:
+    paths: [ "core/**", ".github/workflows/rust-core.yml" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults: { run: { working-directory: core } }
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: { persist-credentials: false }
+      - name: Rust 1.85 (= lokálně ověřená verze) + wasm target
+        run: |
+          rustup toolchain install 1.85.1 --profile minimal -c clippy -t wasm32-unknown-unknown
+          rustup default 1.85.1
+      - run: cargo test --locked
+      - run: cargo test --locked --features ffi
+      - run: cargo clippy --locked --all-targets --features ffi -- -D warnings
+      - name: wasm build
+        run: cargo build --locked --release --target wasm32-unknown-unknown --features wasm
+      - name: UniFFI bindings (Kotlin + Swift) are up to date
+        run: |
+          cargo build --locked --features bindgen   # debug: release profil stripuje UniFFI metadata
+          ./target/debug/uniffi-bindgen generate --library target/debug/libelfall_core.so --language kotlin --language swift --no-format --out-dir /tmp/b
+          diff -r /tmp/b bindings
+      - name: cargo-deny (licence, advisories)
+        uses: EmbarkStudios/cargo-deny-action@30f817c6f72275c6d54dc744fbca09ebc958599f # v2.0.12
+        with: { manifest-path: core/Cargo.toml, command: check advisories bans sources }
