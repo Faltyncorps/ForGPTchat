@@ -10,12 +10,18 @@ settings:
     CODE_SIGNING_ALLOWED: "NO"
     CODE_SIGNING_REQUIRED: "NO"
     ENABLE_USER_SCRIPT_SANDBOXING: "NO"
+packages:
+  Sodium:
+    url: https://github.com/jedisct1/swift-sodium
+    exactVersion: 0.9.1
 targets:
   Eleanor:
     type: application
     platform: iOS
     sources:
       - path: iosApp
+    dependencies:
+      - package: Sodium
     info:
       path: iosApp/Info.plist
       properties:

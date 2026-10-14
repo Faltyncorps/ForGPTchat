@@ -84,13 +84,36 @@ class KeystoreSeedStore(context: Context) : SeedStore {
         keyStore().deleteEntry(alias)
     }
 
-    override fun savePayoutAddress(address: String?) = prefs.edit().putString("payout_address", address).apply()
-    override fun loadPayoutAddress(): String? = prefs.getString("payout_address", null)
+    // SR-04: výplatní adresa a Stellar účet šifrované + autentizované (libsodium XChaCha20-Poly1305, AD = název pole).
+    private val vault: SodiumVault by lazy {
+        val ls = com.goterl.lazysodium.LazySodiumAndroid(com.goterl.lazysodium.SodiumAndroid())
+        val wrapper = KeystoreKeyWrapper("elfall_vault_wrap_v1")
+        val stored = prefs.getString("vault_key", null)
+        val key = stored?.let { wrapper.unwrap(Base64.decode(it, Base64.NO_WRAP)) } ?: SodiumVault.newDataKey(ls).also {
+            prefs.edit().putString("vault_key", Base64.encodeToString(wrapper.wrap(it), Base64.NO_WRAP)).apply()
+        }
+        SodiumVault(ls, key)
+    }
+
+    private fun putSealed(field: String, value: String?) {
+        if (value == null) prefs.edit().remove(field).apply()
+        else prefs.edit().putString(field, vault.seal(field, value)).apply()
+    }
+
+    /** Načte a ověří; starý nešifrovaný záznam jednorázově převede. Podvržená data → null (adresu nutno zadat znovu). */
+    private fun getSealed(field: String): String? {
+        val v = prefs.getString(field, null) ?: return null
+        if (!v.startsWith(SodiumVault.PREFIX)) { putSealed(field, v); return v }
+        return vault.open(field, v)
+    }
+
+    override fun savePayoutAddress(address: String?) = putSealed("payout_address", address)
+    override fun loadPayoutAddress(): String? = getSealed("payout_address")
 
     fun saveAddressIndex(i: Long) = prefs.edit().putLong("addr_index", i).apply()
     fun loadAddressIndex(): Long = prefs.getLong("addr_index", 0)
-    fun saveStellarAccount(a: String?) = prefs.edit().putString("stellar_account", a).apply()
-    fun loadStellarAccount(): String? = prefs.getString("stellar_account", null)
+    fun saveStellarAccount(a: String?) = putSealed("stellar_account", a)
+    fun loadStellarAccount(): String? = getSealed("stellar_account")
 
     companion object { const val AUTH_VALIDITY_SECONDS = 30 }
 }

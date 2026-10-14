@@ -37,3 +37,9 @@ iosApp/iosApp/BankIdAuthSession.swift
 iosApp/iosApp/SecureEnclaveSigner.swift
 .github/workflows/ci.yml
 docs/security/POLICY.md
+androidApp/src/main/kotlin/cz/faltyn/elfall/android/SodiumVault.kt
+androidApp/src/main/kotlin/cz/faltyn/elfall/android/KeystoreKeyWrapper.kt
+iosApp/iosApp/SodiumVault.swift
+backend/Dockerfile
+deploy/docker-compose.yml
+deploy/k8s/bankid.yaml

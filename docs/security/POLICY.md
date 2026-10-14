@@ -14,3 +14,6 @@ Platí pro všechny přispěvatele i automatizované asistenty. Vlastník: GitHu
 10. **Supply chain:** akce pinované na SHA, Gradle dependency verification (SHA-512), pip `--require-hashes`, Dependabot s cooldownem, SBOM, Scorecard, CodeQL.
 11. **Review:** změny v `CODEOWNERS` cestách vyžadují review vlastníka; změny chráněných souborů vyžadují nový podpis manifestu.
 12. **Incidenty** se zapisují do `docs/security/SECURITY-LOG.md` (bez osobních údajů).
+13. **Osobní a rodinné údaje** (záznam o vlastníkovi, doklady, čísla účtů, prohlášení) nikdy v repozitáři; ukládají se **šifrovaně offline** mimo repo – archiv `docs-out/security` šifrovaný nástrojem **age** (X25519), soukromý klíč age jen offline (USB/hardwarový token), nešifrované kopie se po ověření mažou.
+14. **Citlivá lokální data v aplikaci** (výplatní adresa, Stellar účet, budoucí PIN) jen šifrovaně: libsodium XChaCha20-Poly1305 (AEAD) s klíčem chráněným Keystore/Keychain; PIN/hesla jen Argon2id (OWASP: m=19 MiB, t=2, p=1).
+15. **Kontejnery:** distroless nonroot, read-only rootfs, `no-new-privileges`, `cap_drop: ALL`, seccomp RuntimeDefault, default-deny NetworkPolicy.

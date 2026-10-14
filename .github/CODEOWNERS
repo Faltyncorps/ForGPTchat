@@ -35,3 +35,6 @@
 /shared/src/iosMain/                                           @ivosicek123
 /docs/security/                                               @ivosicek123
 /tools/home-defense/                                          @ivosicek123
+/deploy/                                                       @ivosicek123
+/androidApp/src/main/kotlin/cz/faltyn/elfall/android/SodiumVault.kt @ivosicek123
+/iosApp/iosApp/SodiumVault.swift                               @ivosicek123

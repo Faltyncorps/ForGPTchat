@@ -8,7 +8,7 @@ val ktorVersion = "3.1.3"
 
 kotlin { jvmToolchain(17) }
 
-application { mainClass.set("cz.faltyn.elfall.backend.bankid.MainKt") }
+application { mainClass.set("cz.faltyn.elfall.backend.bankid.AppKt") }
 
 dependencies {
     implementation("io.ktor:ktor-server-core:$ktorVersion")

@@ -82,6 +82,11 @@ dependencies {
     // QR scan (camera intent, handles CameraX/permissions internally) + QR render
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     implementation("com.google.zxing:core:3.5.3")
+    // libsodium (XChaCha20-Poly1305, Argon2id) přes ověřené bindingy lazysodium
+    implementation("com.goterl:lazysodium-android:5.1.0@aar") { isTransitive = false }
+    implementation("net.java.dev.jna:jna:5.13.0@aar")
+    testImplementation("com.goterl:lazysodium-java:5.1.4")
+    testImplementation(kotlin("test-junit"))
 }
 
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }

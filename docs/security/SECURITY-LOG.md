@@ -13,4 +13,7 @@
 | 2026-10-14 | Otevřené | Chybí veřejný Ed25519 klíč vlastníka v `integrity/allowed_signers` → CI krok podpisu selhává | čeká na vlastníka |
 | 2026-10-14 | Prevence | Příručka obrany (DEFENSE-PLAYBOOK.md) a obrazovka „Bezpečnostní kontrola“ ve webové aplikaci | hotovo (security-review) |
 | 2026-10-14 | Prevence | Domácí bezpečnostní sada tools/home-defense (inventura sítě, BLE, iPhone/MVT, router, důkazní log) | hotovo (security-review) |
+| 2026-10-14 | Oprava | SR-04: šifrování výplatní adresy a Stellar účtu (libsodium XChaCha20-Poly1305, Android lazysodium, iOS swift-sodium); Argon2id PinHasher (OWASP) | hotovo (security-review) |
+| 2026-10-14 | Infrastruktura | Hardened Dockerfile (distroless nonroot, digest), docker-compose (read-only, cap_drop ALL, no-new-privileges, seccomp), k8s (PSS restricted, NetworkPolicy default-deny); Firecracker zdokumentován jako budoucí volba | hotovo (security-review) |
+| 2026-10-14 | Politika | Osobní údaje jen šifrovaně offline (age), mimo repo | platí |
 | 2026-10-14 | Revize | Bezpečnostní revize (semgrep, gitleaks, osv-scanner, detekt, ruční): viz `REVIEW-2026-10-14.md` | opraveny SR-01, SR-02, SR-07; ostatní doporučení |
