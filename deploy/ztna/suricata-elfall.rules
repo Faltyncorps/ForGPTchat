@@ -1,0 +1,6 @@
+# NENASAZENO – lokální pravidla Suricata (doplněk k ET Open). sid rozsah 9000000+ (lokální).
+alert http any any -> $HOME_NET any (msg:"ELFALL chráněná cesta bez DPoP hlavičky"; flow:to_server,established; http.uri; content:!"/healthz"; content:!"/auth/"; content:!"/passkey/"; content:!"/zt/token"; http.header_names; content:!"DPoP"; sid:9000001; rev:1;)
+alert http any any -> $HOME_NET any (msg:"ELFALL Bearer token místo DPoP"; flow:to_server,established; http.header; content:"Authorization|3a 20|Bearer"; nocase; sid:9000002; rev:1;)
+alert http any any -> $HOME_NET any (msg:"ELFALL alg none v JWT"; flow:to_server,established; http.header; content:"eyJhbGciOiJub25lIi"; sid:9000003; rev:1;)
+alert tls $HOME_NET any -> any any (msg:"ELFALL zastaralé TLS z backendu"; tls.version:1.0; sid:9000004; rev:1;)
+alert http any any -> $HOME_NET any (msg:"ELFALL nadměrné pokusy o /zt/token"; flow:to_server,established; http.uri; content:"/zt/token"; threshold:type both, track by_src, count 20, seconds 60; sid:9000005; rev:1;)

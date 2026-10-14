@@ -50,3 +50,5 @@ proofs/idris/FLC.idr
 backend/src/main/kotlin/cz/faltyn/elfall/backend/bankid/Passkeys.kt
 web/passkey-client.js
 .github/workflows/proofs.yml
+proofs/rocq/KeyPolicy.v
+backend/src/main/kotlin/cz/faltyn/elfall/backend/bankid/ZeroTrust.kt

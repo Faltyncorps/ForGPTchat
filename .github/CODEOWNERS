@@ -42,3 +42,6 @@
 /.github/workflows/proofs.yml                                  @ivosicek123
 /backend/src/main/kotlin/cz/faltyn/elfall/backend/bankid/Passkeys.kt @ivosicek123
 /web/passkey-client.js                                         @ivosicek123
+/proofs/rocq/                                                  @ivosicek123
+/backend/src/main/kotlin/cz/faltyn/elfall/backend/bankid/ZeroTrust.kt @ivosicek123
+/deploy/ztna/                                                  @ivosicek123

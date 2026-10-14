@@ -1,8 +1,8 @@
-name: Formal proofs (EasyCrypt, SPARK, Idris2)
+name: Formal proofs (EasyCrypt, SPARK, Idris2, Rocq)
 
 on:
   push:
-    branches: [ "security-review", "FaltynIvo" ]
+    branches: [ "security-review", "zero-trust", "FaltynIvo" ]
     paths: [ "proofs/**", ".github/workflows/proofs.yml", "androidApp/src/main/kotlin/cz/faltyn/elfall/android/SodiumVault.kt", "iosApp/iosApp/SodiumVault.swift" ]
   pull_request:
     paths: [ "proofs/**", ".github/workflows/proofs.yml" ]
@@ -72,3 +72,18 @@ jobs:
       - name: Check FLC invariants
         working-directory: proofs/idris
         run: idris2 --check FLC.idr
+
+  rocq:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions: { contents: read }
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: { persist-credentials: false }
+      - uses: ocaml/setup-ocaml@93303b622b2522e4411e295f9e77411a24912ac7 # v3.9.0
+        with: { ocaml-compiler: "4.14.2" }
+      - name: Install Rocq (pinned)
+        run: opam install -y rocq-core.9.3.0 rocq-stdlib.9.2.0
+      - name: Check key-access policy proofs
+        working-directory: proofs/rocq
+        run: opam exec -- rocq compile KeyPolicy.v
