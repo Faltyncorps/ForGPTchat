@@ -95,6 +95,7 @@ fun main() {
         passkeys?.let { passkeyModule(it) } // zapnuto jen při nastaveném WEBAUTHN_RP_ID
         // Zero Trust (deny-by-default + DPoP tokeny ≤ 5 min) – jen s passkeys a ZT_PUBLIC_BASE_URL
         val ztBase = System.getenv("ZT_PUBLIC_BASE_URL")
-        if (passkeys != null && ztBase != null) zeroTrustModule(ZeroTrust(ZtConfig(ztBase)), passkeys)
+        val ztCfg = ztBase?.let { ZtConfig.fromEnv(it) }
+        if (passkeys != null && ztCfg != null) zeroTrustModule(ZeroTrust(ztCfg), passkeys)
     }.start(wait = true)
 }
