@@ -17,3 +17,8 @@
 | 2026-10-14 | Infrastruktura | Hardened Dockerfile (distroless nonroot, digest), docker-compose (read-only, cap_drop ALL, no-new-privileges, seccomp), k8s (PSS restricted, NetworkPolicy default-deny); Firecracker zdokumentován jako budoucí volba | hotovo (security-review) |
 | 2026-10-14 | Politika | Osobní údaje jen šifrovaně offline (age), mimo repo | platí |
 | 2026-10-14 | Revize | Bezpečnostní revize (semgrep, gitleaks, osv-scanner, detekt, ruční): viz `REVIEW-2026-10-14.md` | opraveny SR-01, SR-02, SR-07; ostatní doporučení |
+| 2026-10-14 | Formální důkaz | EasyCrypt: SodiumVault (XChaCha20-Poly1305, název pole jako AD) – integrita a vazba na pole redukována na AEAD INT-CTXT (`proofs/easycrypt/`), ověřeno lokálně + CI | hotovo (security-review) |
+| 2026-10-14 | Formální důkaz | SPARK/Ada: rámování vstupu podpisu Ed25519 a nulování klíčů – absence běhových chyb, gnatprove v CI (`proofs/spark/`) | hotovo (security-review) |
+| 2026-10-14 | Formální důkaz | Idris2: invarianty FLC (pevný strop nabídky, zmrazený yFLC nepřevoditelný) – model, CI (`proofs/idris/`) | hotovo (security-review) |
+| 2026-10-14 | Autentizace | WebAuthn passkeys: backend webauthn4j (ES256/EdDSA, UV required, jednorázové challenge) + web klient, testy; úložiště zatím v paměti | rozpracováno (security-review) |
+| 2026-10-14 | Plán | `ZERO-TRUST-ROADMAP.md`: passkeys → ZTNA → Rust jádro (UniFFI/Wasm) → Suricata/Zeek, Cilium/eBPF → HACL*/F* | platí |

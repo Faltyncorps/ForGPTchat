@@ -43,3 +43,10 @@ iosApp/iosApp/SodiumVault.swift
 backend/Dockerfile
 deploy/docker-compose.yml
 deploy/k8s/bankid.yaml
+proofs/easycrypt/SodiumVault.ec
+proofs/spark/src/elfall_signing.ads
+proofs/spark/src/elfall_signing.adb
+proofs/idris/FLC.idr
+backend/src/main/kotlin/cz/faltyn/elfall/backend/bankid/Passkeys.kt
+web/passkey-client.js
+.github/workflows/proofs.yml

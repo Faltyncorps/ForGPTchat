@@ -89,5 +89,9 @@ fun main() {
     val cfg = BankIdConfig.fromEnv()
     val bank = BankIdClient(cfg, HttpClient(CIO) { expectSuccess = false; engine { requestTimeout = 10_000 } })
     val port = System.getenv("PORT")?.toInt() ?: 8080
-    embeddedServer(ServerCIO, port = port, host = System.getenv("BIND") ?: "127.0.0.1") { bankIdModule(cfg, bank) }.start(wait = true)
+    val passkeys = PasskeyConfig.fromEnv()?.let { PasskeyService(it) }
+    embeddedServer(ServerCIO, port = port, host = System.getenv("BIND") ?: "127.0.0.1") {
+        bankIdModule(cfg, bank)
+        passkeys?.let { passkeyModule(it) } // zapnuto jen při nastaveném WEBAUTHN_RP_ID
+    }.start(wait = true)
 }

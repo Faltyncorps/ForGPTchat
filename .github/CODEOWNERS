@@ -38,3 +38,7 @@
 /deploy/                                                       @ivosicek123
 /androidApp/src/main/kotlin/cz/faltyn/elfall/android/SodiumVault.kt @ivosicek123
 /iosApp/iosApp/SodiumVault.swift                               @ivosicek123
+/proofs/                                                       @ivosicek123
+/.github/workflows/proofs.yml                                  @ivosicek123
+/backend/src/main/kotlin/cz/faltyn/elfall/backend/bankid/Passkeys.kt @ivosicek123
+/web/passkey-client.js                                         @ivosicek123
