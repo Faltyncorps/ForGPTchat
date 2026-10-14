@@ -33,9 +33,8 @@ jobs:
           cargo build --locked --features bindgen   # debug: release profil stripuje UniFFI metadata
           ./target/debug/uniffi-bindgen generate --library target/debug/libelfall_core.so --language kotlin --language swift --no-format --out-dir /tmp/b
           diff -r /tmp/b bindings
-      - name: cargo-deny (licence, advisories)
-        uses: EmbarkStudios/cargo-deny-action@30f817c6f72275c6d54dc744fbca09ebc958599f # v2.0.12
-        with: { manifest-path: core/Cargo.toml, command: check advisories bans sources }
+      - name: cargo-deny 0.20.2 (advisories, bans, sources)
+        run: cargo install cargo-deny --version 0.20.2 --locked && cargo deny check advisories bans sources
 
   android-rust:
     runs-on: ubuntu-latest
