@@ -1,0 +1,82 @@
+ELFALL - LINEAR ALGEBRA USED IN THE PROJECT
+===========================================
+Date: 2026-10-14. Informational document, not a specification.
+
+1. VECTORS
+----------
+A vector is an ordered list of numbers. In ELFALL we use:
+  - float2 / SIMD2<Float>: a 2D point (x, y). Every chart vertex is a float2.
+    Stride 8 bytes (2 x 4-byte IEEE-754 float). Rust writes them in native byte order.
+  - float4 / SIMD4<Float>: an RGBA colour, or a homogeneous point (x, y, z, w).
+Operations:
+  - addition:            a + b = (a1+b1, a2+b2)
+  - scaling:             k*a   = (k*a1, k*a2)
+  - linear interpolation (lerp / simd_mix / MSL mix):
+        mix(a, b, t) = a + t*(b - a) = (1-t)*a + t*b,   t in [0,1]
+    Used for chart animation (old points -> new points) and colour gradients.
+  - length (Euclidean norm): |v| = sqrt(v.x^2 + v.y^2)
+    Used in the SDF of rounded cards and the round "dot" of the last chart point.
+
+2. MATRICES
+-----------
+A 4x4 matrix M (simd_float4x4 / MSL float4x4) maps a homogeneous point p=(x,y,0,1)
+to clip space: p' = M * p. Metal stores matrices COLUMN-MAJOR (each column is a float4).
+
+2.1 Orthographic projection (ChartMath.ortho)
+  Maps rectangle [l,r] x [b,t] to clip square [-1,1] x [-1,1]:
+
+        | 2/(r-l)    0        0   -(r+l)/(r-l) |
+    M = |   0      2/(t-b)    0   -(t+b)/(t-b) |
+        |   0        0        1        0       |
+        |   0        0        0        1       |
+
+  Check: x=l -> 2l/(r-l) - (r+l)/(r-l) = -1;  x=r -> +1. Same for y.
+  The chart adds an 8 % margin in y (ChartMath.fit, unitFit: b=-0.08, t=1.08).
+
+2.2 Inverse matrix (ChartMath.unfit)
+  M^-1 * (-1,-1,0,1) returns the data coordinate of the bottom-left corner,
+  used as the baseline of the filled area. For an orthographic matrix the inverse
+  always exists because the diagonal entries are non-zero (r != l, t != b; a flat
+  series is widened by +-1 first).
+
+2.3 Matrix interpolation (ChartMath.mix)
+  Column-wise lerp: mix(A,B,t) = (1-t)A + tB. For pure scale+translate matrices
+  (like ortho) the result is again scale+translate, so the animation between two
+  zoom levels is smooth and never shears. (For rotations this would NOT be valid;
+  you would use quaternions instead. We have no rotations.)
+
+3. NORMALISATION (Rust, core/src/gpu.rs write_chart)
+-----------------------------------------------------
+  Resampling: n output points at x_i = i/(n-1); value by linear interpolation
+  between neighbouring inputs k, k+1:  y = v_k + (v_{k+1}-v_k)*(t-k).
+  Normalisation to [0,1]: y' = (y - lo) / (hi - lo)  -- an affine map.
+  Layout ELFALL-GPU-CHART-v1: n line points, then 2n fill vertices
+  (point, (x,0)) for a triangle strip. Total 3n * 8 bytes.
+
+4. SIGNED DISTANCE FIELDS (Shaders.metal)
+------------------------------------------
+  Rounded rectangle centred at c with half-size h and radius r:
+      q = |p - c| - h + r           (component-wise abs)
+      d = |max(q,0)| + min(max(q.x,q.y),0) - r
+  d < 0 inside, d > 0 outside. smoothstep(-1,1,d) gives a 2-pixel antialiased edge.
+
+5. TRIPLE BUFFERING AS A QUEUE (not algebra, but counting)
+----------------------------------------------------------
+  A semaphore starting at 3 guarantees at most 3 frames in flight:
+  frames_started - frames_completed <= 3. The ring index is i mod 3.
+
+6. WALLET MATH (where linear algebra stops)
+--------------------------------------------
+  - Amounts are INTEGERS (satoshi, 1 BTC = 10^8 sat). Never floats for money;
+    floats are only for drawing.
+  - secp256k1 / Ed25519 signatures use elliptic-curve groups over finite fields
+    (modular arithmetic), NOT real-number linear algebra. Point addition on a curve
+    is not vector addition. All of it lives in audited libraries (libsodium,
+    secp256k1); ELFALL does not implement curve math itself.
+  - Hashes (SHA-256, SHA-384 for the wasm pin) are not linear; that is the point.
+
+7. WEB (web-leptos)
+-------------------
+  The Leptos CSR app draws QR codes as a matrix of modules (a 0/1 grid);
+  Reed-Solomon error correction inside qrcodegen is linear algebra over GF(256)
+  (polynomial division in a finite field).
