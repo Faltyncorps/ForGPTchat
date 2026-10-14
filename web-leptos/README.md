@@ -32,3 +32,11 @@ Nástroje: Rust 1.90.0, Trunk 0.21.14, wasm-bindgen 0.2.129 (připnuto v Cargo.t
 
 ## Neportováno
 Bank iD (OIDC) – ve `web/` vypnuto příznakem; zůstává v JS verzi. Původní `web/` zůstává beze změny.
+
+## Release profil – poznámky (2026-10-14)
+- `opt-level = "z"`, `lto = true`, `codegen-units = 1`, `panic = "abort"`, `strip = true` = nejmenší **jediný** `*_bg.wasm`.
+  Alternativa pro rychlost místo velikosti: `opt-level = 3` (větší wasm, rychlejší výpočty) – pro tuto UI aplikaci nevýhodné.
+- `wasm-opt` zůstává vypnutý (viz výše); po aktualizaci binaryen ≥ 116 (bulk-memory) lze zapnout `data-wasm-opt="z"`
+  – hash pro CSP/pin se přepočítá automaticky hookem.
+- Výstup je jeden wasm + jeden glue JS + jeden inline zavaděč s SHA-384 hashem v CSP; žádný další runtime JS.
+- Kontrola po buildu: `test "$(ls dist/*_bg.wasm | wc -l)" = 1` (jediný wasm) a `grep -q "unsafe-inline" dist/csp.txt && exit 1`.
