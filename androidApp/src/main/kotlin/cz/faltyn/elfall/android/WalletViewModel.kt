@@ -19,6 +19,9 @@ import kotlinx.coroutines.launch
 enum class AppMode { HOME, SETTINGS, RECEIVE, TRANSFER, HISTORY, NETWORK, SWAP, WITHDRAW_CARD }
 
 data class UiState(
+    /** Výsledek runtime kontroly vydavatele FLC (stellar.toml + home_domain); null = zatím neověřeno. */
+    val flcIssuerCheck: String? = null,
+    val flcBlocked: Boolean = false,
     val standalone: Boolean = BuildConfig.STANDALONE,
     val network: BtcNetwork = BtcNetwork.DEFAULT,
     val elfallNetwork: ElfallNetwork = ElfallNetwork.DEFAULT,
@@ -80,6 +83,20 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         )
     )
     val state: StateFlow<UiState> = _state
+    /** Ochrana proti swap útoku: ověří issuer FLC proti Horizonu a https://<home_domain>/.well-known/stellar.toml. */
+    fun verifyFlcIssuer() {
+        viewModelScope.launch {
+            val r = cz.faltyn.elfall.shared.integrity.StellarTomlVerifier.default().verify()
+            _state.update {
+                when (r) {
+                    is cz.faltyn.elfall.shared.integrity.IssuerCheck.Ok -> it.copy(flcIssuerCheck = "✅ Vydavatel FLC ověřen (stellar.toml)", flcBlocked = false)
+                    is cz.faltyn.elfall.shared.integrity.IssuerCheck.Mismatch -> it.copy(flcIssuerCheck = "⛔ Nesoulad vydavatele FLC: ${r.reason}. Operace s FLC zablokovány.", flcBlocked = true)
+                    is cz.faltyn.elfall.shared.integrity.IssuerCheck.Unavailable -> it.copy(flcIssuerCheck = "⚠️ Vydavatele FLC nelze ověřit: ${r.reason}")
+                }
+            }
+        }
+    }
+
     val offRampProviderNames get() = offRampProviders.map { it.id.displayName }
 
     private fun fail(e: Throwable, prefix: String = "") = _state.update { it.copy(error = prefix + (e.message ?: e::class.simpleName), busy = false) }

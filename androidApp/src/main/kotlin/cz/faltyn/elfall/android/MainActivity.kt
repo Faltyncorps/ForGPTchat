@@ -1,5 +1,7 @@
 package cz.faltyn.elfall.android
 
+import cz.faltyn.elfall.shared.identity.BankIdStrings
+import cz.faltyn.elfall.shared.identity.IdentityFlags
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -186,6 +188,10 @@ fun AppScreen(s: UiState, vm: WalletViewModel, authThen: (String, () -> Unit) ->
                     vm.offRampProviderNames.forEachIndexed { i, n -> FilterChip(selected = s.cashProviderIndex == i, onClick = { vm.setCashProvider(i) }, label = { Text(n) }) }
                 }
                 AmountField(s.amountInput, vm::onAmountChange)
+                if (IdentityFlags.bankIdEnabled) {
+                    // Potvrzovací krok před výběrem: step-up Bank iD svázaný s hashem transakce (WithdrawalGate)
+                    OutlinedButton(onClick = { }) { Text(BankIdStrings.CONFIRM_WITHDRAWAL) }
+                }
                 Button(onClick = vm::quoteCashOut) { Text(stringResource(R.string.get_quote)) }
                 s.cashQuote?.let { q -> Card { Column(Modifier.padding(12.dp)) {
                     Text("${q.amountCrypto} ${q.cryptoAsset} → ${OffRampValidation.formatFiat(q.fiatNetMinor, q.currency)}")
@@ -323,9 +329,18 @@ private fun SettingsPanel(s: UiState, vm: WalletViewModel) {
             Text("Seed je uložen jen v tomto zařízení (Android Keystore). Nikdy ho nesdílejte.", style = MaterialTheme.typography.bodySmall)
             HorizontalDivider()
             Text("Síť: ${s.network.name.lowercase()} (podpis jen na testnetu)")
+            Text(s.flcIssuerCheck ?: "Vydavatel FLC: neověřeno", style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = { vm.verifyFlcIssuer() }) { Text("Ověřit vydavatele FLC") }
+            Text(stringResource(R.string.about_author), style = MaterialTheme.typography.bodySmall)
             Text("Verze: ${BuildConfig.VERSION_NAME}${if (s.standalone) " · Eleanor standalone" else " · ELFALL"}", style = MaterialTheme.typography.bodySmall)
             Text("Podmínky použití: docs/terms-cs.md", style = MaterialTheme.typography.bodySmall)
             OutlinedButton(onClick = vm::lock) { Text("🔒 Zamknout peněženku") }
+            if (IdentityFlags.bankIdEnabled) { // feature flag, výchozí VYPNUTO (sandbox)
+                HorizontalDivider()
+                // TODO(bankid): napojit na BankIdVerifier.start(KYC) + otevřít authorize_url v Custom Tab
+                OutlinedButton(onClick = { }) { Text(BankIdStrings.VERIFY_BUTTON) }
+                Text(BankIdStrings.SANDBOX_NOTE, style = MaterialTheme.typography.bodySmall)
+            }
         }
     }
 }

@@ -10,12 +10,18 @@ settings:
     CODE_SIGNING_ALLOWED: "NO"
     CODE_SIGNING_REQUIRED: "NO"
     ENABLE_USER_SCRIPT_SANDBOXING: "NO"
+packages:
+  Sodium:
+    url: https://github.com/jedisct1/swift-sodium
+    exactVersion: 0.9.1
 targets:
   Eleanor:
     type: application
     platform: iOS
     sources:
       - path: iosApp
+    dependencies:
+      - package: Sodium
     info:
       path: iosApp/Info.plist
       properties:
@@ -26,6 +32,9 @@ targets:
         NSFaceIDUsageDescription: "Face ID chrání vaši peněženku / Face ID protects your wallet seed."
         NSCameraUsageDescription: "Skenování QR adres / Scan payment QR codes."
         ELEANOR_STANDALONE: true
+        CFBundleURLTypes:
+          - CFBundleURLName: cz.faltyn.elfall.bankid
+            CFBundleURLSchemes: [ "elfall" ]
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
           NSAllowsArbitraryLoadsInWebContent: false

@@ -11,3 +11,9 @@
 -keep class fr.acinq.secp256k1.** { *; }
 # zxing
 -keep class com.journeyapps.barcodescanner.** { *; }
+
+# libsodium přes JNA (lazysodium) – JNA používá reflexi
+-keep class com.sun.jna.** { *; }
+-keep class * implements com.sun.jna.** { *; }
+-keep class com.goterl.lazysodium.** { *; }
+-dontwarn java.awt.**

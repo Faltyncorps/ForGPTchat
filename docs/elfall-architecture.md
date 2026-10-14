@@ -42,3 +42,11 @@
 ### Partner follow-up (Anycoin)
 
 Contact Anycoin business / support for: (1) partner or affiliate deep-link parameters, (2) whether card payout (vs bank account) is available for CZK/EUR/USD, (3) any private API for quotes. Until then ELFALL opens the public site/app only.
+
+## Šifrování lokálních dat peněženky (SodiumVault)
+Výplatní adresa a Stellar účet se ukládají šifrovaně a autentizovaně (libsodium XChaCha20-Poly1305, název pole jako associated data; klíč chráněn Android Keystore / iOS Keychain). Formální model a strojově ověřený důkaz integrity a vazby na pole (redukce na AEAD INT-CTXT, EasyCrypt): [proofs/easycrypt/README.md](../proofs/easycrypt/README.md).
+
+### Další formální modely
+- `proofs/spark/` – SPARK/Ada: rámování vstupu podpisu Ed25519 a nulování klíčů (absence běhových chyb).
+- `proofs/idris/` – Idris2: invarianty FLC (pevný strop nabídky, zmrazený yFLC).
+- Plán dalšího postupu: `docs/security/ZERO-TRUST-ROADMAP.md`.
