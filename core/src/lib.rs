@@ -1,11 +1,19 @@
 //! ELFALL krypto jádro (fáze 2 ZERO-TRUST-ROADMAP). Jediná implementace sdílená
 //! Androidem/iOS (UniFFI, feature `ffi`) a webem (wasm-bindgen, feature `wasm`).
-#![forbid(unsafe_code)]
+#![deny(unsafe_code)] // výjimka jen v modulu `sodium` (FFI do libsodium)
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 pub mod framing;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod pin;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod sign;
+#[cfg(target_arch = "wasm32")]
+#[path = "sign_wasm.rs"]
+pub mod sign;
+#[cfg(not(target_arch = "wasm32"))]
+mod sodium;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod vault;
 
 #[cfg(feature = "ffi")]
