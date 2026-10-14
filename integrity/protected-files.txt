@@ -15,3 +15,15 @@ AUTHORS
 NOTICE
 .github/CODEOWNERS
 .github/workflows/integrity.yml
+gradle/wrapper/gradle-wrapper.properties
+gradle/wrapper/gradle-wrapper.jar
+gradle/verification-metadata.xml
+backend/bankid/oidc.py
+backend/bankid/config.py
+backend/bankid/app.py
+shared/src/commonMain/kotlin/cz/faltyn/elfall/shared/identity/IdentityVerifier.kt
+shared/src/commonMain/kotlin/cz/faltyn/elfall/shared/identity/OidcCallback.kt
+web/oidc-client.js
+web/app.js
+web/index.html
+web/sw.js

@@ -41,6 +41,9 @@ class BankIdConfig:
         missing = [k for k in ("BANKID_CLIENT_ID", "BANKID_CLIENT_SECRET", "BANKID_REDIRECT_URI") if not os.environ.get(k)]
         if missing:
             raise RuntimeError("Chybí proměnné prostředí: " + ", ".join(missing))
+        redirect = os.environ["BANKID_REDIRECT_URI"]
+        if not (redirect.startswith("https://") or redirect.startswith("http://localhost")):
+            raise RuntimeError("BANKID_REDIRECT_URI musí být https:// (výjimka jen http://localhost pro vývoj)")
         return BankIdConfig(
             client_id=os.environ["BANKID_CLIENT_ID"],
             client_secret=os.environ["BANKID_CLIENT_SECRET"],

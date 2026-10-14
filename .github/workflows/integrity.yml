@@ -2,7 +2,7 @@ name: Integrity (signed critical constants)
 
 on:
   push:
-    branches: [ "eleanor-rebuild", "bankid-sandbox", "FaltynIvo" ]
+    branches: [ "eleanor-rebuild", "bankid-sandbox", "elfall-0.5", "oidc-hardening", "FaltynIvo" ]
   pull_request:
   workflow_dispatch:
 
@@ -19,7 +19,18 @@ jobs:
         with: { persist-credentials: false }
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with: { python-version: "3.12" }
-      - name: Verify manifest hashes, pinned constants and owner signature
+      - name: Verify manifest hashes and pinned constants
+        run: python3 scripts/integrity_manifest.py verify --no-signature
+      - name: Verify owner signature (fails until owner adds key to integrity/allowed_signers)
         run: python3 scripts/integrity_manifest.py verify
+      - name: Gradle wrapper pinned (distributionSha256Sum + dependency verification on)
+        run: |
+          grep -Eq '^distributionSha256Sum=[0-9a-f]{64}$' gradle/wrapper/gradle-wrapper.properties
+          grep -q '<verify-metadata>true</verify-metadata>' gradle/verification-metadata.xml
+          ! grep -RInE 'BANKID_CLIENT_SECRET=[^c$ ]|-----BEGIN [A-Z ]*PRIVATE KEY' --exclude-dir=.git --exclude-dir=.github . 
       - name: Unit tests of the integrity checker
         run: pip install "pytest==8.3.5" && python -m pytest -q scripts/tests
+      - name: Bank iD OIDC backend tests
+        run: pip install -r backend/bankid/requirements.txt && python -m pytest -q -c backend/bankid/pytest.ini backend/bankid/tests
+      - name: Web OIDC client tests (node:test)
+        run: node --test web/tests/

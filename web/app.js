@@ -136,16 +136,34 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 
 // --- Bank iD (sandbox) – feature flag, výchozí VYPNUTO ---
 const BANKID_ENABLED = false;
-const BANKID_BACKEND = ''; // URL backend/bankid služby (jen přes HTTPS)
+const BANKID_BACKEND = ''; // URL backend/bankid služby (jen přes HTTPS) – doplní se při nasazení, nikdy tajemství
+const BANKID_ISSUER = 'https://oidc.sandbox.bankid.cz/'; // sandbox
 (function bankId() {
   const card = document.getElementById('bankid-card');
-  if (!card || !BANKID_ENABLED || !BANKID_BACKEND) return;
+  if (!card || !BANKID_ENABLED || !BANKID_BACKEND || !window.ElfallOidc) return;
+  const O = window.ElfallOidc;
+  const backend = O.assertSafeBackend(BANKID_BACKEND);
   card.hidden = false;
+  // Návrat z Bank iD (redirect_uri = tato stránka): ověřit state a předat code backendu.
+  if (new URLSearchParams(location.search).has('state')) {
+    (async () => {
+      try {
+        const cb = O.parseCallback(sessionStorage, location.href);
+        history.replaceState(null, '', location.pathname); // odstranit code z URL/historie
+        const r = await fetch(backend + '/auth/callback', {method: 'POST', credentials: 'omit', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(cb)});
+        if (!r.ok) throw new Error(r.status);
+        const res = await r.json();
+        alert(res.level === 'bank_aml_verified' ? 'Identita ověřena přes Bank iD' : 'Ověření dokončeno');
+      } catch (e) { history.replaceState(null, '', location.pathname); alert('Ověření přes Bank iD se nezdařilo'); }
+    })();
+  }
   document.getElementById('bankid-verify').addEventListener('click', async () => {
     try {
-      const r = await fetch(BANKID_BACKEND + '/auth/start', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({purpose: 'kyc'})});
+      const r = await fetch(backend + '/auth/start', {method: 'POST', credentials: 'omit', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({purpose: 'kyc'})});
       if (!r.ok) throw new Error(r.status);
-      location.assign((await r.json()).authorize_url);
+      const j = await r.json();
+      O.remember(sessionStorage, j.state);
+      location.assign(O.assertAuthorizeUrl(j.authorize_url, BANKID_ISSUER, j.state));
     } catch (e) { alert('Ověření přes Bank iD se nezdařilo'); }
   });
 })();

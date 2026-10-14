@@ -133,9 +133,13 @@ class BankIdClient:
 
     async def verify_id_token(self, id_token: str, nonce: str, *, max_auth_age_s: int | None = None) -> dict[str, Any]:
         try:
-            kid = jwt.get_unverified_header(id_token).get("kid")
+            header = jwt.get_unverified_header(id_token)
         except jwt.PyJWTError as e:
             raise OidcError("neplatná hlavička id_tokenu") from e
+        # Odmítnout alg=none / HS* / jiné algoritmy ještě před výběrem klíče (alg confusion).
+        if header.get("alg") not in ALLOWED_ALGS:
+            raise OidcError("nepovolený algoritmus id_tokenu")
+        kid = header.get("kid")
         key = await self._key_for(kid)
         try:
             claims = jwt.decode(
@@ -144,7 +148,14 @@ class BankIdClient:
             )
         except jwt.PyJWTError as e:
             raise OidcError(f"id_token neověřen: {e}") from e
-        if not secrets.compare_digest(str(claims.get("nonce", "")), nonce):
+        aud = claims.get("aud")
+        if isinstance(aud, list) and len(aud) > 1 and claims.get("azp") != self.cfg.client_id:
+            raise OidcError("azp nesouhlasí")
+        if "azp" in claims and claims["azp"] != self.cfg.client_id:
+            raise OidcError("azp nesouhlasí")
+        if int(claims["iat"]) > time.time() + 30:
+            raise OidcError("iat je v budoucnosti")
+        if not nonce or not secrets.compare_digest(str(claims.get("nonce", "")), nonce):
             raise OidcError("nonce nesouhlasí")
         if max_auth_age_s is not None:
             at = claims.get("auth_time")
@@ -154,7 +165,11 @@ class BankIdClient:
 
     async def _key_for(self, kid: str | None):
         for refresh in (False, True):  # rotace klíčů
-            for k in (await self.jwks(refresh=refresh)).get("keys", []):
+            keys = [k for k in (await self.jwks(refresh=refresh)).get("keys", [])
+                    if k.get("use", "sig") == "sig" and k.get("kty") == "RSA"]
+            if kid is None and len(keys) != 1:
+                continue  # bez kid jen při jediném podpisovém klíči
+            for k in keys:
                 if kid is None or k.get("kid") == kid:
                     return jwt.PyJWK(k, algorithm="PS512").key
         raise OidcError("klíč z JWKS nenalezen")

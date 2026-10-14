@@ -141,6 +141,7 @@ async def test_txn_requires_hash(api, mock_op):
 def test_config_env(monkeypatch):
     for k in ("BANKID_CLIENT_ID", "BANKID_CLIENT_SECRET", "BANKID_REDIRECT_URI"):
         monkeypatch.setenv(k, "x")
+    monkeypatch.setenv("BANKID_REDIRECT_URI", "https://app.test/cb")
     monkeypatch.setenv("BANKID_ENV", "sandbox")
     assert BankIdConfig.from_env().issuer == ISS
     monkeypatch.setenv("BANKID_ENV", "production")
