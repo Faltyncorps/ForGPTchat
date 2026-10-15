@@ -1,0 +1,62 @@
+name: jscpd
+
+# NOTE: GitHub Actions is currently blocked by account billing (jobs fail before start).
+# Workflow is kept ready; it will run once billing is resolved.
+
+on:
+  push:
+    branches: [ "FaltynIvo" ]
+  pull_request:
+    branches: [ "FaltynIvo" ]
+  workflow_dispatch:
+    inputs:
+      compare:
+        description: "Run semantic Android <-> iOS compare (downloads ~550 MB model)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+env:
+  JSCPD_IGNORE: "**/build/**,**/target/**,**/.gradle/**,**/uniffi/**,**/Generated*/**,iosApp/RustCore/**"
+
+jobs:
+  duplication:
+    # Default PR/push job: classic clone detection only (cheap, no model).
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: { persist-credentials: false }
+      - uses: kucherenko/jscpd@095d6ca33e9f291c144bb05ef653b2bfdc3c1453 # v5.4.1
+        with:
+          path: "androidApp/src iosApp shared/src core/src web-leptos/src backend/src"
+          ignore: ${{ env.JSCPD_IGNORE }}
+          threshold: "5"
+          reporters: "console,markdown,json"
+          output: "jscpd-report"
+
+  compare:
+    # Semantic compare is heavy -> manual only, with cached model.
+    if: github.event_name == 'workflow_dispatch' && inputs.compare
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: { persist-credentials: false }
+      - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: ~/.cache/jscpd/models
+          key: jscpd-model-CodeRankEmbed-v1
+      - name: Download semantic model (cached)
+        run: npx --yes jscpd@5 --semantic-download
+      - name: Compare androidApp/src <-> iosApp
+        run: |
+          npx --yes jscpd@5 --compare androidApp/src iosApp \
+            --ignore "$JSCPD_IGNORE" -r json,markdown,console-full -o .jscpd-compare
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: jscpd-compare-android-ios
+          path: .jscpd-compare/
+          retention-days: 30
