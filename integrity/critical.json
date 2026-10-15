@@ -20,5 +20,12 @@
     "algorithm": "HMAC-SHA256(key=offline_secret_salt, msg=normalized_account)",
     "value": "UNSET-COMPUTED-OFF-REPO",
     "note": "Číslo účtu NIKDY není v repozitáři. Hodnota se počítá offline (viz docs/integrity.md); prostý SHA-256 čísla účtu by šel uhodnout hrubou silou."
+  },
+  "author_identity": {
+    "name": "Ivo Faltýn",
+    "credit_name": "Faltyn",
+    "orcid": "0009-0007-4808-8653",
+    "url": "https://orcid.org/0009-0007-4808-8653",
+    "verified": true
   }
 }
