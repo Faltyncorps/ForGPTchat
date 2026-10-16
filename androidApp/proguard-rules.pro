@@ -17,3 +17,6 @@
 -keep class * implements com.sun.jna.** { *; }
 -keep class com.goterl.lazysodium.** { *; }
 -dontwarn java.awt.**
+
+# UniFFI vazby Rust jádra (JNA reflexe)
+-keep class uniffi.elfall_core.** { *; }
