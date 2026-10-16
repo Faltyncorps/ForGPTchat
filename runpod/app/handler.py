@@ -11,6 +11,7 @@ Routes (input JSON):
   {"route": "sol/slot"}
   {"route": "polygon/block"}
   {"route": "flc/price"}   # display-only reference
+  {"route": "sentiment", "text": "...", "labels": [" pozitivní", " negativní", " neutrální"]}
 
 Never accepts seeds or private keys.
 """
@@ -23,6 +24,7 @@ import runpod
 
 from . import config
 from . import proxies
+from .sentiment import classify_sentiment
 
 
 def _ok(data: Any) -> dict:
@@ -99,6 +101,19 @@ async def dispatch(event: dict) -> dict:
                 "testnet_only": True,
             }
         )
+
+    if route == "sentiment":
+        if any(body.get(key) for key in ("seed", "mnemonic", "private_key", "privateKey")):
+            return _err("seeds and private keys are not accepted")
+        try:
+            data = classify_sentiment(
+                text=body.get("text") if isinstance(body.get("text"), str) else None,
+                prompt=body.get("prompt") if isinstance(body.get("prompt"), str) else None,
+                labels=body.get("labels"),
+            )
+        except ValueError as exc:
+            return _err(str(exc))
+        return _ok(data)
 
     return _err(f"unknown route: {route}", 404)
 
