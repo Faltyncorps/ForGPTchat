@@ -46,6 +46,10 @@ enum SecureRenderFlow {
     /// dokud GPU nedokončí; poslední release zavolá deallocator → `elfall_gpu_buffer_free`.
     static func makeNoCopyBuffer(_ device: MTLDevice, _ alloc: RustGpuAllocation) -> MTLBuffer? {
         guard let h = alloc.take() else { return nil }
+        // bytesNoCopy vyžaduje stránkové zarovnání ukazatele i délky (Rust PageBuffer: 16 KiB na arm64).
+        guard MetalNoCopyAlign.isAligned(h.pointer), h.length % MetalNoCopyAlign.pageSize == 0 else {
+            h.deallocator(h.pointer, h.length); return nil
+        }
         guard let b = device.makeBuffer(bytesNoCopy: h.pointer, length: h.length, options: [.storageModeShared], deallocator: h.deallocator) else {
             h.deallocator(h.pointer, h.length) // Metal vlastnictví nepřevzal
             return nil
