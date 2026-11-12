@@ -1,1 +1,0 @@
-"""ELFALL RunPod network worker."""
